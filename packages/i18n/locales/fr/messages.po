@@ -433,6 +433,10 @@ msgstr "{name} (même nom qu'une compétence intégrée)"
 msgid "{name} (unsupported type)"
 msgstr "{name} (type non pris en charge)"
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{name} {part}"
+msgstr ""
+
 #: apps/mobile/lib/inbox/activity.ts
 #: apps/web/src/lib/activity-list-filters.ts
 msgid "{name} asked"
@@ -494,6 +498,10 @@ msgstr "{names} gardent leur propre modèle"
 #: apps/web/src/pages/model-settings/space-bots-model.tsx
 msgid "{names} keeps its own model"
 msgstr "{names} garde son propre modèle"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{picked} of {total}"
+msgstr ""
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/paywall.tsx
@@ -924,6 +932,15 @@ msgstr "Environ {kb} Ko de mémoire ne parviennent plus au bot."
 #: apps/web/src/components/InfoTooltip.tsx
 msgid "About {label}"
 msgstr "À propos de {label}"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "About you"
+msgstr ""
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Accept"
+msgstr ""
 
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Access key ID"
@@ -1775,11 +1792,6 @@ msgstr "Paramètres d'autorisation (optionnel)"
 msgid "Authorization server"
 msgstr "Serveur d'autorisation"
 
-#: apps/mobile/components/cards/AppConnectCard.tsx
-#: apps/web/src/pages/shell/chat/message-cards.tsx
-msgid "Authorization timed out. Please try again."
-msgstr "L'autorisation a expiré. Veuillez réessayer."
-
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "Authorize"
 msgstr "Autoriser"
@@ -1819,10 +1831,6 @@ msgstr "Disponible pour les commandes shell sous le nom {commandVariable}"
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 msgid "Avatar Studio"
 msgstr "Studio d'avatars"
-
-#: apps/web/src/pages/shell/computers/computer-panel.tsx
-msgid "Awake"
-msgstr "Actif"
 
 #: apps/mobile/app/(settings)/_layout.tsx
 #: apps/mobile/app/new-group.tsx
@@ -1994,6 +2002,10 @@ msgstr "Modèles des bots"
 #: apps/web/src/pages/shell/computers/computer-overlay.tsx
 msgid "Bot screen"
 msgstr "Écran du bot"
+
+#: apps/web/src/pages/shell/computers/computer-panel.tsx
+msgid "Bot screen preview"
+msgstr ""
 
 #: apps/mobile/app/(settings)/general.tsx
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
@@ -2211,10 +2223,6 @@ msgstr "Annuler"
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 msgid "Cancel invitation"
 msgstr "Annuler l'invitation"
-
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Cancel new bot"
-msgstr "Annuler le nouveau bot"
 
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Cancel new group"
@@ -2467,6 +2475,10 @@ msgstr "Choisir un dossier"
 msgid "Choose how to use Rakazo"
 msgstr "Choisissez comment utiliser Rakazo"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Choose your {home} folder, or a backup of it."
+msgstr ""
+
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
 msgid "Chosen bots"
@@ -2548,6 +2560,7 @@ msgstr "Effacement en cours…"
 #: apps/web/src/pages/routines/RoutineEditor.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 #: apps/web/src/pages/shell/chat/chat-find-bar.tsx
 #: apps/web/src/pages/space/KnowledgeSection.tsx
@@ -2856,7 +2869,9 @@ msgstr "Connecter {selectedProviderName}"
 msgid "Connect a chat app"
 msgstr "Connecter une application de messagerie"
 
+#: apps/mobile/app/(settings)/models.tsx
 #: apps/mobile/app/chat-model.tsx
+#: apps/web/src/pages/model-settings/ModelSettingsOverlay.tsx
 #: apps/web/src/pages/onboarding/model-step.tsx
 #: apps/web/src/pages/shell/chat/chat-model-picker.tsx
 #: apps/web/src/pages/shell/composer/composer-error.tsx
@@ -3572,6 +3587,10 @@ msgstr "Impossible de charger les bots. Rechargez pour réessayer."
 msgid "Could not load chats"
 msgstr "Impossible de charger les discussions"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "Could not load computer hours"
+msgstr ""
+
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Could not load computer settings"
 msgstr "Impossible de charger les paramètres de l'ordinateur"
@@ -4116,8 +4135,10 @@ msgstr "Impossible de démarrer l'enseignement"
 msgid "Could not submit answer"
 msgstr "Impossible d'envoyer la réponse"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Could not submit this answer"
 msgstr "Impossible de soumettre cette réponse"
 
@@ -4289,7 +4310,7 @@ msgstr "Pays"
 #: apps/mobile/lib/inbox/use-inbox-chat-actions.ts
 #: apps/mobile/lib/inbox/use-inbox-header.ts
 #: apps/web/src/components/spaces/CreateOrganizationDialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/create-bot-dialog.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/shell/sidebar/sidebar-header.tsx
@@ -4351,7 +4372,7 @@ msgstr "Créé"
 #: apps/mobile/app/new-organization.tsx
 #: apps/mobile/app/new-space.tsx
 #: apps/web/src/components/bot-templates/bot-templates-dialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Creating…"
@@ -4499,11 +4520,18 @@ msgstr "jours"
 
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/calls/IncomingCall.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/lib/calls/incoming-calls.ts
 #: apps/web/src/components/call/IncomingCall.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 msgid "Decline"
 msgstr "Refuser"
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Declined"
+msgstr ""
 
 #: apps/mobile/app/bot-settings.tsx
 #: apps/mobile/components/bots/bot-look-picker.tsx
@@ -4725,7 +4753,6 @@ msgstr "Refusé"
 msgid "Deny"
 msgstr "Refuser"
 
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
 #: apps/web/src/pages/space/Board.tsx
 msgid "Description"
 msgstr "Description"
@@ -5288,6 +5315,11 @@ msgstr "Agrandir le tableau"
 msgid "expired"
 msgstr "expiré"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Expired"
+msgstr ""
+
 #: apps/mobile/app/(settings)/vault.tsx
 #: apps/mobile/components/vault/vault-item-sheet.tsx
 #: apps/web/src/components/vault/VaultItemDetail.tsx
@@ -5635,10 +5667,6 @@ msgstr "Attribution…"
 msgid "GraphQL endpoint"
 msgstr "Point de terminaison GraphQL"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Grok Bot"
-msgstr "Grok Bot"
-
 #: apps/mobile/app/_layout.tsx
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/inbox/archived-bot-list.ios.tsx
@@ -5835,6 +5863,11 @@ msgstr "heure"
 msgid "hours"
 msgstr "heures"
 
+#: apps/mobile/app/(settings)/billing.tsx
+#: apps/web/src/components/billing/ComputerUsage.tsx
+msgid "Hours by computer"
+msgstr ""
+
 #: apps/mobile/app/(settings)/signup-survey.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
 msgid "How big is your team?"
@@ -5930,6 +5963,7 @@ msgid "Import"
 msgstr "Importer"
 
 #: apps/web/src/components/settings/AccountDataSettings.tsx
+#: apps/web/src/pages/shell/bots/agent-import-dialog.tsx
 #: apps/web/src/pages/shell/bots/agent-import.tsx
 msgid "Import an agent"
 msgstr "Importer un agent"
@@ -6440,8 +6474,10 @@ msgstr "Chargement des fournisseurs vocaux…"
 #: apps/web/src/pages/plugins/PluginSubmissionsPanel.tsx
 #: apps/web/src/pages/routines/RoutineRunHistory.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/chat/transcript.tsx
 #: apps/web/src/pages/space/Artifacts.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Loading…"
 msgstr "Chargement…"
 
@@ -7278,6 +7314,10 @@ msgstr "Aucun bot"
 msgid "No bots match"
 msgstr "Aucun bot ne correspond"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "No computer hours used yet"
+msgstr ""
+
 #: apps/mobile/components/thread/message-bubble.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
@@ -7441,9 +7481,11 @@ msgstr "Aucune colonne de site web et de mot de passe trouvée."
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/(settings)/spending-limit.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/settings/spending-limit-row.tsx
 #: apps/mobile/components/vault/vault-item-editor.tsx
 #: apps/web/src/components/billing/SpendingLimitSettings.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/components/vault/VaultItemEditor.tsx
 msgid "None"
 msgstr "Aucun"
@@ -7674,6 +7716,10 @@ msgstr "Seul le créateur du bot peut définir sa clé de webhook."
 msgid "Only the owner of this account can choose a plan."
 msgstr "Seul le propriétaire de ce compte peut choisir un forfait."
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "Only this bot"
+msgstr ""
+
 #: apps/mobile/app/page-share.tsx
 #: apps/web/src/components/pages/SharePopover.tsx
 msgid "Only you"
@@ -7795,10 +7841,6 @@ msgstr "URL de serveur compatible OpenAI"
 msgid "OpenAPI JSON"
 msgstr "OpenAPI JSON"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "OpenClaw or Hermes"
-msgstr "OpenClaw ou Hermes"
-
 #: apps/web/src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "Ouvre la boîte de dialogue d'impression du navigateur. Choisissez Enregistrer au format PDF comme destination."
@@ -7816,10 +7858,6 @@ msgstr "Optionnel"
 #: apps/web/src/pages/integrations/McpServerForm.tsx
 msgid "Optional header value"
 msgstr "Valeur d'en-tête optionnelle"
-
-#: apps/mobile/components/settings/social-sign-in-buttons.tsx
-msgid "or"
-msgstr "ou"
 
 #: apps/mobile/app/(settings)/model-connection.tsx
 msgid "Or connect an API key"
@@ -7864,6 +7902,10 @@ msgstr "OTA {id}"
 #: apps/mobile/lib/platform/app-version.ts
 msgid "OTA {id}, {date}"
 msgstr "OTA {id}, {date}"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Other computers"
+msgstr ""
 
 #: apps/mobile/components/models/compatible-endpoint-form.tsx
 #: apps/web/src/components/models/FoundModelPicker.tsx
@@ -8264,6 +8306,10 @@ msgstr "Politique de confidentialité"
 #: apps/web/src/pages/shell/bots/bot-settings-sections.tsx
 msgid "Private"
 msgstr "Privé"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Private Computer"
+msgstr ""
 
 #: apps/web/src/pages/shell/bots/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -9516,6 +9562,14 @@ msgstr "Envoyer l’enregistrement"
 msgid "Send reset link"
 msgstr "Envoyer le lien de réinitialisation"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to {assistantName}"
+msgstr ""
+
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to your assistant"
+msgstr ""
+
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
 msgstr "Envoyer avec Entrée"
@@ -9527,9 +9581,11 @@ msgstr "Envoyer avec Entrée"
 msgid "Sending…"
 msgstr "Envoi en cours…"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/thread/ask-block.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Sent"
 msgstr "Envoyé"
 
@@ -9796,10 +9852,6 @@ msgid "Sign in at <0>{0}</0>, then paste the code here."
 msgstr "Connectez-vous sur <0>{0}</0>, puis collez le code ici."
 
 #: apps/mobile/app/sign-in.tsx
-msgid "Sign in to continue to Rakazo"
-msgstr "Connectez-vous pour continuer vers Rakazo"
-
-#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/pages/auth/Auth.tsx
 msgid "Sign in to Rakazo"
 msgstr "Connectez-vous à Rakazo"
@@ -9911,10 +9963,6 @@ msgstr "Compétence {position}"
 #: apps/web/src/pages/shell/use-palette-actions.ts
 msgid "Skills"
 msgstr "Compétences"
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "Skills join the library all your bots share."
-msgstr "Les compétences rejoignent la bibliothèque partagée par tous vos bots."
 
 #: apps/mobile/app/computer.tsx
 #: apps/mobile/app/new-group.tsx
@@ -10417,6 +10465,7 @@ msgstr "Équipe"
 
 #: apps/mobile/lib/computers/computer.ts
 #: apps/web/src/pages/shell/computers/computer-view.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Team Computer"
 msgstr "Ordinateur d'équipe"
 
@@ -10682,10 +10731,6 @@ msgstr "Cette clé d’authentification est illisible."
 #: apps/web/src/pages/shell/bots/use-agent-import-source.ts
 msgid "This backup could not be read."
 msgstr "Impossible de lire cette sauvegarde."
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "This bot"
-msgstr "Ce bot"
 
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
@@ -11740,7 +11785,9 @@ msgid "Welcome back"
 msgstr "Bon retour"
 
 #: apps/mobile/app/(settings)/_layout.tsx
+#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
+#: apps/web/src/pages/auth/Auth.tsx
 msgid "Welcome to Rakazo"
 msgstr "Bienvenue sur Rakazo"
 
@@ -11760,6 +11807,10 @@ msgstr "Pour quoi souhaitez-vous surtout que Rakazo vous aide ?"
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "What do you want me on first?"
 msgstr "Que voulez-vous que je fasse en premier ?"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "What it remembers"
+msgstr ""
 
 #: apps/web/src/components/teach/TeachComputerOverlay.tsx
 msgid "What result will you demonstrate?"

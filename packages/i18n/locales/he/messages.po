@@ -433,6 +433,10 @@ msgstr "{name} (אותו שם כמו מיומנות מובנית)"
 msgid "{name} (unsupported type)"
 msgstr "{name} (סוג לא נתמך)"
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{name} {part}"
+msgstr ""
+
 #: apps/mobile/lib/inbox/activity.ts
 #: apps/web/src/lib/activity-list-filters.ts
 msgid "{name} asked"
@@ -494,6 +498,10 @@ msgstr "{names} שומרים על המודל שלהם"
 #: apps/web/src/pages/model-settings/space-bots-model.tsx
 msgid "{names} keeps its own model"
 msgstr "{names} שומר על המודל שלו"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{picked} of {total}"
+msgstr ""
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/paywall.tsx
@@ -924,6 +932,15 @@ msgstr "כ-{kb} KB של זיכרון כבר לא מגיעים לבוט."
 #: apps/web/src/components/InfoTooltip.tsx
 msgid "About {label}"
 msgstr "על {label}"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "About you"
+msgstr ""
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Accept"
+msgstr ""
 
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Access key ID"
@@ -1775,11 +1792,6 @@ msgstr "פרמטרים להרשאה (אופציונלי)"
 msgid "Authorization server"
 msgstr "שרת הרשאות"
 
-#: apps/mobile/components/cards/AppConnectCard.tsx
-#: apps/web/src/pages/shell/chat/message-cards.tsx
-msgid "Authorization timed out. Please try again."
-msgstr "תם הזמן לאישור ההרשאה. אפשר לנסות שוב."
-
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "Authorize"
 msgstr "מתן הרשאה"
@@ -1819,10 +1831,6 @@ msgstr "זמין לפקודות shell בתור {commandVariable}"
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 msgid "Avatar Studio"
 msgstr "Avatar Studio"
-
-#: apps/web/src/pages/shell/computers/computer-panel.tsx
-msgid "Awake"
-msgstr "פעיל"
 
 #: apps/mobile/app/(settings)/_layout.tsx
 #: apps/mobile/app/new-group.tsx
@@ -1994,6 +2002,10 @@ msgstr "מודלים של בוטים"
 #: apps/web/src/pages/shell/computers/computer-overlay.tsx
 msgid "Bot screen"
 msgstr "מסך הבוט"
+
+#: apps/web/src/pages/shell/computers/computer-panel.tsx
+msgid "Bot screen preview"
+msgstr ""
 
 #: apps/mobile/app/(settings)/general.tsx
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
@@ -2211,10 +2223,6 @@ msgstr "ביטול"
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 msgid "Cancel invitation"
 msgstr "ביטול ההזמנה"
-
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Cancel new bot"
-msgstr "ביטול בוט חדש"
 
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Cancel new group"
@@ -2467,6 +2475,10 @@ msgstr "בחירת תיקייה"
 msgid "Choose how to use Rakazo"
 msgstr "בחירת אופן השימוש ב-Rakazo"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Choose your {home} folder, or a backup of it."
+msgstr ""
+
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
 msgid "Chosen bots"
@@ -2548,6 +2560,7 @@ msgstr "מנקה…"
 #: apps/web/src/pages/routines/RoutineEditor.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 #: apps/web/src/pages/shell/chat/chat-find-bar.tsx
 #: apps/web/src/pages/space/KnowledgeSection.tsx
@@ -2856,7 +2869,9 @@ msgstr "חיבור {selectedProviderName}"
 msgid "Connect a chat app"
 msgstr "חיבור אפליקציית צ׳אט"
 
+#: apps/mobile/app/(settings)/models.tsx
 #: apps/mobile/app/chat-model.tsx
+#: apps/web/src/pages/model-settings/ModelSettingsOverlay.tsx
 #: apps/web/src/pages/onboarding/model-step.tsx
 #: apps/web/src/pages/shell/chat/chat-model-picker.tsx
 #: apps/web/src/pages/shell/composer/composer-error.tsx
@@ -3572,6 +3587,10 @@ msgstr "לא ניתן לטעון את הבוטים. יש לטעון מחדש כ�
 msgid "Could not load chats"
 msgstr "לא ניתן לטעון את הצ׳אטים"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "Could not load computer hours"
+msgstr ""
+
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Could not load computer settings"
 msgstr "לא ניתן לטעון את הגדרות המחשב"
@@ -4116,8 +4135,10 @@ msgstr "לא ניתן להתחיל לימוד"
 msgid "Could not submit answer"
 msgstr "לא ניתן לשלוח את התשובה"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Could not submit this answer"
 msgstr "לא ניתן לשלוח את התשובה"
 
@@ -4289,7 +4310,7 @@ msgstr "מדינה"
 #: apps/mobile/lib/inbox/use-inbox-chat-actions.ts
 #: apps/mobile/lib/inbox/use-inbox-header.ts
 #: apps/web/src/components/spaces/CreateOrganizationDialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/create-bot-dialog.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/shell/sidebar/sidebar-header.tsx
@@ -4351,7 +4372,7 @@ msgstr "נוצר"
 #: apps/mobile/app/new-organization.tsx
 #: apps/mobile/app/new-space.tsx
 #: apps/web/src/components/bot-templates/bot-templates-dialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Creating…"
@@ -4499,11 +4520,18 @@ msgstr "ימים"
 
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/calls/IncomingCall.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/lib/calls/incoming-calls.ts
 #: apps/web/src/components/call/IncomingCall.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 msgid "Decline"
 msgstr "דחייה"
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Declined"
+msgstr ""
 
 #: apps/mobile/app/bot-settings.tsx
 #: apps/mobile/components/bots/bot-look-picker.tsx
@@ -4725,7 +4753,6 @@ msgstr "נדחה"
 msgid "Deny"
 msgstr "דחייה"
 
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
 #: apps/web/src/pages/space/Board.tsx
 msgid "Description"
 msgstr "תיאור"
@@ -5288,6 +5315,11 @@ msgstr "הרחבת טבלה"
 msgid "expired"
 msgstr "פג תוקף"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Expired"
+msgstr ""
+
 #: apps/mobile/app/(settings)/vault.tsx
 #: apps/mobile/components/vault/vault-item-sheet.tsx
 #: apps/web/src/components/vault/VaultItemDetail.tsx
@@ -5635,10 +5667,6 @@ msgstr "מעניק…"
 msgid "GraphQL endpoint"
 msgstr "נקודת קצה של GraphQL"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Grok Bot"
-msgstr "בוט Grok"
-
 #: apps/mobile/app/_layout.tsx
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/inbox/archived-bot-list.ios.tsx
@@ -5835,6 +5863,11 @@ msgstr "שעה"
 msgid "hours"
 msgstr "שעות"
 
+#: apps/mobile/app/(settings)/billing.tsx
+#: apps/web/src/components/billing/ComputerUsage.tsx
+msgid "Hours by computer"
+msgstr ""
+
 #: apps/mobile/app/(settings)/signup-survey.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
 msgid "How big is your team?"
@@ -5930,6 +5963,7 @@ msgid "Import"
 msgstr "ייבוא"
 
 #: apps/web/src/components/settings/AccountDataSettings.tsx
+#: apps/web/src/pages/shell/bots/agent-import-dialog.tsx
 #: apps/web/src/pages/shell/bots/agent-import.tsx
 msgid "Import an agent"
 msgstr "ייבוא סוכן"
@@ -6440,8 +6474,10 @@ msgstr "טוען ספקי קול…"
 #: apps/web/src/pages/plugins/PluginSubmissionsPanel.tsx
 #: apps/web/src/pages/routines/RoutineRunHistory.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/chat/transcript.tsx
 #: apps/web/src/pages/space/Artifacts.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Loading…"
 msgstr "טוען…"
 
@@ -7278,6 +7314,10 @@ msgstr "אין בוטים"
 msgid "No bots match"
 msgstr "אין בוטים תואמים"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "No computer hours used yet"
+msgstr ""
+
 #: apps/mobile/components/thread/message-bubble.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
@@ -7441,9 +7481,11 @@ msgstr "לא נמצאו עמודות של אתר וסיסמה."
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/(settings)/spending-limit.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/settings/spending-limit-row.tsx
 #: apps/mobile/components/vault/vault-item-editor.tsx
 #: apps/web/src/components/billing/SpendingLimitSettings.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/components/vault/VaultItemEditor.tsx
 msgid "None"
 msgstr "ללא"
@@ -7674,6 +7716,10 @@ msgstr "רק יוצר הבוט יכול להגדיר את מפתח ה-webhook ש
 msgid "Only the owner of this account can choose a plan."
 msgstr "רק הבעלים של החשבון יכולים לבחור תוכנית."
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "Only this bot"
+msgstr ""
+
 #: apps/mobile/app/page-share.tsx
 #: apps/web/src/components/pages/SharePopover.tsx
 msgid "Only you"
@@ -7795,10 +7841,6 @@ msgstr "כתובת URL של שרת תואם OpenAI"
 msgid "OpenAPI JSON"
 msgstr "OpenAPI JSON"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "OpenClaw or Hermes"
-msgstr "OpenClaw או Hermes"
-
 #: apps/web/src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "פותח את חלון ההדפסה של הדפדפן. בחר/י „שמירה כ-PDF” כיעד."
@@ -7816,10 +7858,6 @@ msgstr "אופציונלי"
 #: apps/web/src/pages/integrations/McpServerForm.tsx
 msgid "Optional header value"
 msgstr "ערך header אופציונלי"
-
-#: apps/mobile/components/settings/social-sign-in-buttons.tsx
-msgid "or"
-msgstr "או"
 
 #: apps/mobile/app/(settings)/model-connection.tsx
 msgid "Or connect an API key"
@@ -7864,6 +7902,10 @@ msgstr "OTA {id}"
 #: apps/mobile/lib/platform/app-version.ts
 msgid "OTA {id}, {date}"
 msgstr "OTA {id}, {date}"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Other computers"
+msgstr ""
 
 #: apps/mobile/components/models/compatible-endpoint-form.tsx
 #: apps/web/src/components/models/FoundModelPicker.tsx
@@ -8264,6 +8306,10 @@ msgstr "מדיניות הפרטיות"
 #: apps/web/src/pages/shell/bots/bot-settings-sections.tsx
 msgid "Private"
 msgstr "פרטי"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Private Computer"
+msgstr ""
 
 #: apps/web/src/pages/shell/bots/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -9516,6 +9562,14 @@ msgstr "שליחת ההקלטה"
 msgid "Send reset link"
 msgstr "שליחת קישור לאיפוס"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to {assistantName}"
+msgstr ""
+
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to your assistant"
+msgstr ""
+
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
 msgstr "שליחה ב-Enter"
@@ -9527,9 +9581,11 @@ msgstr "שליחה ב-Enter"
 msgid "Sending…"
 msgstr "שולח…"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/thread/ask-block.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Sent"
 msgstr "נשלח"
 
@@ -9796,10 +9852,6 @@ msgid "Sign in at <0>{0}</0>, then paste the code here."
 msgstr "התחברו ב-<0>{0}</0> והדביקו כאן את הקוד."
 
 #: apps/mobile/app/sign-in.tsx
-msgid "Sign in to continue to Rakazo"
-msgstr "יש להתחבר כדי להמשיך ל-Rakazo"
-
-#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/pages/auth/Auth.tsx
 msgid "Sign in to Rakazo"
 msgstr "התחברות ל-Rakazo"
@@ -9911,10 +9963,6 @@ msgstr "מיומנות {position}"
 #: apps/web/src/pages/shell/use-palette-actions.ts
 msgid "Skills"
 msgstr "מיומנויות"
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "Skills join the library all your bots share."
-msgstr "המיומנויות מצטרפות לספרייה שכל הבוטים שלך חולקים."
 
 #: apps/mobile/app/computer.tsx
 #: apps/mobile/app/new-group.tsx
@@ -10417,6 +10465,7 @@ msgstr "צוות"
 
 #: apps/mobile/lib/computers/computer.ts
 #: apps/web/src/pages/shell/computers/computer-view.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Team Computer"
 msgstr "מחשב הצוות"
 
@@ -10682,10 +10731,6 @@ msgstr "לא ניתן לקרוא את מפתח המאמת הזה."
 #: apps/web/src/pages/shell/bots/use-agent-import-source.ts
 msgid "This backup could not be read."
 msgstr "לא ניתן לקרוא את הגיבוי הזה."
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "This bot"
-msgstr "הבוט הזה"
 
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
@@ -11740,7 +11785,9 @@ msgid "Welcome back"
 msgstr "ברוכים השבים"
 
 #: apps/mobile/app/(settings)/_layout.tsx
+#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
+#: apps/web/src/pages/auth/Auth.tsx
 msgid "Welcome to Rakazo"
 msgstr "ברוכים הבאים ל-Rakazo"
 
@@ -11760,6 +11807,10 @@ msgstr "במה הכי חשוב לך ש-Rakazo יעזור?"
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "What do you want me on first?"
 msgstr "במה להתחיל קודם?"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "What it remembers"
+msgstr ""
 
 #: apps/web/src/components/teach/TeachComputerOverlay.tsx
 msgid "What result will you demonstrate?"

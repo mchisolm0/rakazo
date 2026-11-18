@@ -433,6 +433,10 @@ msgstr "{name} (बिल्ट-इन स्किल जैसा ही न�
 msgid "{name} (unsupported type)"
 msgstr "{name} (असमर्थित प्रकार)"
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{name} {part}"
+msgstr ""
+
 #: apps/mobile/lib/inbox/activity.ts
 #: apps/web/src/lib/activity-list-filters.ts
 msgid "{name} asked"
@@ -494,6 +498,10 @@ msgstr "{names} अपना मॉडल रखते हैं"
 #: apps/web/src/pages/model-settings/space-bots-model.tsx
 msgid "{names} keeps its own model"
 msgstr "{names} अपना मॉडल रखता है"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{picked} of {total}"
+msgstr ""
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/paywall.tsx
@@ -924,6 +932,15 @@ msgstr "लगभग {kb} KB मेमोरी अब बॉट तक नह�
 #: apps/web/src/components/InfoTooltip.tsx
 msgid "About {label}"
 msgstr "{label} के बारे में"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "About you"
+msgstr ""
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Accept"
+msgstr ""
 
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Access key ID"
@@ -1775,11 +1792,6 @@ msgstr "ऑथराइज़ेशन पैरामीटर (वैकल्
 msgid "Authorization server"
 msgstr "प्राधिकरण सर्वर"
 
-#: apps/mobile/components/cards/AppConnectCard.tsx
-#: apps/web/src/pages/shell/chat/message-cards.tsx
-msgid "Authorization timed out. Please try again."
-msgstr "ऑथराइज़ेशन का समय समाप्त हो गया। कृपया पुनः प्रयास करें।"
-
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "Authorize"
 msgstr "ऑथराइज़ करें"
@@ -1819,10 +1831,6 @@ msgstr "शेल कमांड के लिए {commandVariable} के र�
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 msgid "Avatar Studio"
 msgstr "अवतार स्टूडियो"
-
-#: apps/web/src/pages/shell/computers/computer-panel.tsx
-msgid "Awake"
-msgstr "सक्रिय"
 
 #: apps/mobile/app/(settings)/_layout.tsx
 #: apps/mobile/app/new-group.tsx
@@ -1994,6 +2002,10 @@ msgstr "बॉट मॉडल"
 #: apps/web/src/pages/shell/computers/computer-overlay.tsx
 msgid "Bot screen"
 msgstr "बॉट स्क्रीन"
+
+#: apps/web/src/pages/shell/computers/computer-panel.tsx
+msgid "Bot screen preview"
+msgstr ""
 
 #: apps/mobile/app/(settings)/general.tsx
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
@@ -2211,10 +2223,6 @@ msgstr "रद्द करें"
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 msgid "Cancel invitation"
 msgstr "आमंत्रण रद्द करें"
-
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Cancel new bot"
-msgstr "नया बॉट रद्द करें"
 
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Cancel new group"
@@ -2467,6 +2475,10 @@ msgstr "फ़ोल्डर चुनें"
 msgid "Choose how to use Rakazo"
 msgstr "चुनें कि Rakazo का उपयोग कैसे करें"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Choose your {home} folder, or a backup of it."
+msgstr ""
+
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
 msgid "Chosen bots"
@@ -2548,6 +2560,7 @@ msgstr "साफ़ किया जा रहा है…"
 #: apps/web/src/pages/routines/RoutineEditor.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 #: apps/web/src/pages/shell/chat/chat-find-bar.tsx
 #: apps/web/src/pages/space/KnowledgeSection.tsx
@@ -2856,7 +2869,9 @@ msgstr "{selectedProviderName} कनेक्ट करें"
 msgid "Connect a chat app"
 msgstr "चैट ऐप कनेक्ट करें"
 
+#: apps/mobile/app/(settings)/models.tsx
 #: apps/mobile/app/chat-model.tsx
+#: apps/web/src/pages/model-settings/ModelSettingsOverlay.tsx
 #: apps/web/src/pages/onboarding/model-step.tsx
 #: apps/web/src/pages/shell/chat/chat-model-picker.tsx
 #: apps/web/src/pages/shell/composer/composer-error.tsx
@@ -3572,6 +3587,10 @@ msgstr "बॉट लोड नहीं हो सके। फिर कोश
 msgid "Could not load chats"
 msgstr "चैट लोड नहीं हो सकीं"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "Could not load computer hours"
+msgstr ""
+
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Could not load computer settings"
 msgstr "कंप्यूटर सेटिंग्स लोड नहीं हो सकीं"
@@ -4116,8 +4135,10 @@ msgstr "सिखाना शुरू नहीं हो सका"
 msgid "Could not submit answer"
 msgstr "जवाब सबमिट नहीं हो सका"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Could not submit this answer"
 msgstr "यह उत्तर सबमिट नहीं किया जा सका"
 
@@ -4289,7 +4310,7 @@ msgstr "देश"
 #: apps/mobile/lib/inbox/use-inbox-chat-actions.ts
 #: apps/mobile/lib/inbox/use-inbox-header.ts
 #: apps/web/src/components/spaces/CreateOrganizationDialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/create-bot-dialog.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/shell/sidebar/sidebar-header.tsx
@@ -4351,7 +4372,7 @@ msgstr "बनाया गया"
 #: apps/mobile/app/new-organization.tsx
 #: apps/mobile/app/new-space.tsx
 #: apps/web/src/components/bot-templates/bot-templates-dialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Creating…"
@@ -4499,11 +4520,18 @@ msgstr "दिन"
 
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/calls/IncomingCall.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/lib/calls/incoming-calls.ts
 #: apps/web/src/components/call/IncomingCall.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 msgid "Decline"
 msgstr "अस्वीकार करें"
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Declined"
+msgstr ""
 
 #: apps/mobile/app/bot-settings.tsx
 #: apps/mobile/components/bots/bot-look-picker.tsx
@@ -4725,7 +4753,6 @@ msgstr "अस्वीकृत"
 msgid "Deny"
 msgstr "अस्वीकार करें"
 
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
 #: apps/web/src/pages/space/Board.tsx
 msgid "Description"
 msgstr "विवरण"
@@ -5288,6 +5315,11 @@ msgstr "तालिका बड़ी करें"
 msgid "expired"
 msgstr "समाप्त"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Expired"
+msgstr ""
+
 #: apps/mobile/app/(settings)/vault.tsx
 #: apps/mobile/components/vault/vault-item-sheet.tsx
 #: apps/web/src/components/vault/VaultItemDetail.tsx
@@ -5635,10 +5667,6 @@ msgstr "अनुमति दी जा रही है…"
 msgid "GraphQL endpoint"
 msgstr "GraphQL एंडपॉइंट"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Grok Bot"
-msgstr "Grok बॉट"
-
 #: apps/mobile/app/_layout.tsx
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/inbox/archived-bot-list.ios.tsx
@@ -5835,6 +5863,11 @@ msgstr "घंटा"
 msgid "hours"
 msgstr "घंटे"
 
+#: apps/mobile/app/(settings)/billing.tsx
+#: apps/web/src/components/billing/ComputerUsage.tsx
+msgid "Hours by computer"
+msgstr ""
+
 #: apps/mobile/app/(settings)/signup-survey.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
 msgid "How big is your team?"
@@ -5930,6 +5963,7 @@ msgid "Import"
 msgstr "इम्पोर्ट करें"
 
 #: apps/web/src/components/settings/AccountDataSettings.tsx
+#: apps/web/src/pages/shell/bots/agent-import-dialog.tsx
 #: apps/web/src/pages/shell/bots/agent-import.tsx
 msgid "Import an agent"
 msgstr "एजेंट इंपोर्ट करें"
@@ -6440,8 +6474,10 @@ msgstr "आवाज़ प्रोवाइडर्स लोड हो र�
 #: apps/web/src/pages/plugins/PluginSubmissionsPanel.tsx
 #: apps/web/src/pages/routines/RoutineRunHistory.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/chat/transcript.tsx
 #: apps/web/src/pages/space/Artifacts.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Loading…"
 msgstr "लोड हो रहा है…"
 
@@ -7278,6 +7314,10 @@ msgstr "कोई बॉट नहीं"
 msgid "No bots match"
 msgstr "कोई बॉट मेल नहीं खाता"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "No computer hours used yet"
+msgstr ""
+
 #: apps/mobile/components/thread/message-bubble.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
@@ -7441,9 +7481,11 @@ msgstr "वेबसाइट और पासवर्ड कॉलम नह�
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/(settings)/spending-limit.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/settings/spending-limit-row.tsx
 #: apps/mobile/components/vault/vault-item-editor.tsx
 #: apps/web/src/components/billing/SpendingLimitSettings.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/components/vault/VaultItemEditor.tsx
 msgid "None"
 msgstr "कोई नहीं"
@@ -7674,6 +7716,10 @@ msgstr "केवल बॉट बनाने वाला ही इसकी 
 msgid "Only the owner of this account can choose a plan."
 msgstr "केवल इस खाते का मालिक प्लान चुन सकता है।"
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "Only this bot"
+msgstr ""
+
 #: apps/mobile/app/page-share.tsx
 #: apps/web/src/components/pages/SharePopover.tsx
 msgid "Only you"
@@ -7795,10 +7841,6 @@ msgstr "OpenAI-संगत सर्वर URL"
 msgid "OpenAPI JSON"
 msgstr "OpenAPI JSON"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "OpenClaw or Hermes"
-msgstr "OpenClaw या Hermes"
-
 #: apps/web/src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "आपके ब्राउज़र का प्रिंट डायलॉग खोलता है। गंतव्य के रूप में Save as PDF चुनें।"
@@ -7816,10 +7858,6 @@ msgstr "वैकल्पिक"
 #: apps/web/src/pages/integrations/McpServerForm.tsx
 msgid "Optional header value"
 msgstr "वैकल्पिक हेडर मान"
-
-#: apps/mobile/components/settings/social-sign-in-buttons.tsx
-msgid "or"
-msgstr "या"
 
 #: apps/mobile/app/(settings)/model-connection.tsx
 msgid "Or connect an API key"
@@ -7864,6 +7902,10 @@ msgstr "OTA {id}"
 #: apps/mobile/lib/platform/app-version.ts
 msgid "OTA {id}, {date}"
 msgstr "OTA {id}, {date}"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Other computers"
+msgstr ""
 
 #: apps/mobile/components/models/compatible-endpoint-form.tsx
 #: apps/web/src/components/models/FoundModelPicker.tsx
@@ -8264,6 +8306,10 @@ msgstr "गोपनीयता नीति"
 #: apps/web/src/pages/shell/bots/bot-settings-sections.tsx
 msgid "Private"
 msgstr "निजी"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Private Computer"
+msgstr ""
 
 #: apps/web/src/pages/shell/bots/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -9516,6 +9562,14 @@ msgstr "रिकॉर्डिंग भेजें"
 msgid "Send reset link"
 msgstr "रीसेट लिंक भेजें"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to {assistantName}"
+msgstr ""
+
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to your assistant"
+msgstr ""
+
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
 msgstr "Enter से भेजें"
@@ -9527,9 +9581,11 @@ msgstr "Enter से भेजें"
 msgid "Sending…"
 msgstr "भेजा जा रहा है…"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/thread/ask-block.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Sent"
 msgstr "भेजा गया"
 
@@ -9796,10 +9852,6 @@ msgid "Sign in at <0>{0}</0>, then paste the code here."
 msgstr "<0>{0}</0> पर साइन इन करें, फिर कोड यहाँ पेस्ट करें।"
 
 #: apps/mobile/app/sign-in.tsx
-msgid "Sign in to continue to Rakazo"
-msgstr "Rakazo पर जारी रखने के लिए साइन इन करें"
-
-#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/pages/auth/Auth.tsx
 msgid "Sign in to Rakazo"
 msgstr "Rakazo में साइन इन करें"
@@ -9911,10 +9963,6 @@ msgstr "स्किल {position}"
 #: apps/web/src/pages/shell/use-palette-actions.ts
 msgid "Skills"
 msgstr "स्किल्स"
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "Skills join the library all your bots share."
-msgstr "स्किल्स उस लाइब्रेरी में जुड़ती हैं जिसे आपके सभी बॉट साझा करते हैं।"
 
 #: apps/mobile/app/computer.tsx
 #: apps/mobile/app/new-group.tsx
@@ -10417,6 +10465,7 @@ msgstr "टीम"
 
 #: apps/mobile/lib/computers/computer.ts
 #: apps/web/src/pages/shell/computers/computer-view.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Team Computer"
 msgstr "टीम कंप्यूटर"
 
@@ -10682,10 +10731,6 @@ msgstr "यह ऑथेंटिकेटर कुंजी पढ़ी न�
 #: apps/web/src/pages/shell/bots/use-agent-import-source.ts
 msgid "This backup could not be read."
 msgstr "यह बैकअप पढ़ा नहीं जा सका।"
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "This bot"
-msgstr "यह बॉट"
 
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
@@ -11740,7 +11785,9 @@ msgid "Welcome back"
 msgstr "फिर से स्वागत है"
 
 #: apps/mobile/app/(settings)/_layout.tsx
+#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
+#: apps/web/src/pages/auth/Auth.tsx
 msgid "Welcome to Rakazo"
 msgstr "Rakazo में आपका स्वागत है"
 
@@ -11760,6 +11807,10 @@ msgstr "आप Rakazo से सबसे ज़्यादा किसमे�
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "What do you want me on first?"
 msgstr "आप मुझसे सबसे पहले किस पर काम करवाना चाहते हैं?"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "What it remembers"
+msgstr ""
 
 #: apps/web/src/components/teach/TeachComputerOverlay.tsx
 msgid "What result will you demonstrate?"

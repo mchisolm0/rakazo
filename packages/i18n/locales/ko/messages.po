@@ -433,6 +433,10 @@ msgstr "{name}(기본 제공 스킬과 같은 이름)"
 msgid "{name} (unsupported type)"
 msgstr "{name} (지원되지 않는 형식)"
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{name} {part}"
+msgstr ""
+
 #: apps/mobile/lib/inbox/activity.ts
 #: apps/web/src/lib/activity-list-filters.ts
 msgid "{name} asked"
@@ -494,6 +498,10 @@ msgstr "{names}은(는) 자체 모델을 유지합니다"
 #: apps/web/src/pages/model-settings/space-bots-model.tsx
 msgid "{names} keeps its own model"
 msgstr "{names}은(는) 자체 모델을 유지합니다"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "{picked} of {total}"
+msgstr ""
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/paywall.tsx
@@ -924,6 +932,15 @@ msgstr "약 {kb}KB의 기억이 더 이상 봇에 전달되지 않습니다."
 #: apps/web/src/components/InfoTooltip.tsx
 msgid "About {label}"
 msgstr "{label} 정보"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "About you"
+msgstr ""
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Accept"
+msgstr ""
 
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Access key ID"
@@ -1775,11 +1792,6 @@ msgstr "인증 매개변수(선택 사항)"
 msgid "Authorization server"
 msgstr "인증 서버"
 
-#: apps/mobile/components/cards/AppConnectCard.tsx
-#: apps/web/src/pages/shell/chat/message-cards.tsx
-msgid "Authorization timed out. Please try again."
-msgstr "인증 시간이 만료되었습니다. 다시 시도해 주세요."
-
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "Authorize"
 msgstr "인증하기"
@@ -1819,10 +1831,6 @@ msgstr "셸 명령에서 {commandVariable}(으)로 사용 가능"
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 msgid "Avatar Studio"
 msgstr "아바타 스튜디오"
-
-#: apps/web/src/pages/shell/computers/computer-panel.tsx
-msgid "Awake"
-msgstr "활성"
 
 #: apps/mobile/app/(settings)/_layout.tsx
 #: apps/mobile/app/new-group.tsx
@@ -1994,6 +2002,10 @@ msgstr "봇 모델"
 #: apps/web/src/pages/shell/computers/computer-overlay.tsx
 msgid "Bot screen"
 msgstr "Bot 화면"
+
+#: apps/web/src/pages/shell/computers/computer-panel.tsx
+msgid "Bot screen preview"
+msgstr ""
 
 #: apps/mobile/app/(settings)/general.tsx
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
@@ -2211,10 +2223,6 @@ msgstr "취소"
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 msgid "Cancel invitation"
 msgstr "초대 취소"
-
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Cancel new bot"
-msgstr "새 Bot 만들기 취소"
 
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Cancel new group"
@@ -2467,6 +2475,10 @@ msgstr "폴더 선택"
 msgid "Choose how to use Rakazo"
 msgstr "Rakazo 사용 방식 선택"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Choose your {home} folder, or a backup of it."
+msgstr ""
+
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
 msgid "Chosen bots"
@@ -2548,6 +2560,7 @@ msgstr "비우는 중…"
 #: apps/web/src/pages/routines/RoutineEditor.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 #: apps/web/src/pages/shell/chat/chat-find-bar.tsx
 #: apps/web/src/pages/space/KnowledgeSection.tsx
@@ -2856,7 +2869,9 @@ msgstr "{selectedProviderName} 연결"
 msgid "Connect a chat app"
 msgstr "채팅 앱 연결"
 
+#: apps/mobile/app/(settings)/models.tsx
 #: apps/mobile/app/chat-model.tsx
+#: apps/web/src/pages/model-settings/ModelSettingsOverlay.tsx
 #: apps/web/src/pages/onboarding/model-step.tsx
 #: apps/web/src/pages/shell/chat/chat-model-picker.tsx
 #: apps/web/src/pages/shell/composer/composer-error.tsx
@@ -3572,6 +3587,10 @@ msgstr "봇을 불러오지 못했습니다. 새로고침하여 다시 시도하
 msgid "Could not load chats"
 msgstr "채팅을 불러오지 못했습니다"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "Could not load computer hours"
+msgstr ""
+
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Could not load computer settings"
 msgstr "컴퓨터 설정을 불러오지 못했습니다"
@@ -4116,8 +4135,10 @@ msgstr "가르치기를 시작하지 못했습니다."
 msgid "Could not submit answer"
 msgstr "답변을 제출하지 못했습니다"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Could not submit this answer"
 msgstr "답변을 보내지 못했습니다."
 
@@ -4289,7 +4310,7 @@ msgstr "국가"
 #: apps/mobile/lib/inbox/use-inbox-chat-actions.ts
 #: apps/mobile/lib/inbox/use-inbox-header.ts
 #: apps/web/src/components/spaces/CreateOrganizationDialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/create-bot-dialog.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/shell/sidebar/sidebar-header.tsx
@@ -4351,7 +4372,7 @@ msgstr "생성됨"
 #: apps/mobile/app/new-organization.tsx
 #: apps/mobile/app/new-space.tsx
 #: apps/web/src/components/bot-templates/bot-templates-dialog.tsx
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "Creating…"
@@ -4499,11 +4520,18 @@ msgstr "일"
 
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/calls/IncomingCall.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/lib/calls/incoming-calls.ts
 #: apps/web/src/components/call/IncomingCall.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 msgid "Decline"
 msgstr "거절"
+
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Declined"
+msgstr ""
 
 #: apps/mobile/app/bot-settings.tsx
 #: apps/mobile/components/bots/bot-look-picker.tsx
@@ -4725,7 +4753,6 @@ msgstr "거부됨"
 msgid "Deny"
 msgstr "거부"
 
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
 #: apps/web/src/pages/space/Board.tsx
 msgid "Description"
 msgstr "설명"
@@ -5288,6 +5315,11 @@ msgstr "표 확장"
 msgid "expired"
 msgstr "만료됨"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
+msgid "Expired"
+msgstr ""
+
 #: apps/mobile/app/(settings)/vault.tsx
 #: apps/mobile/components/vault/vault-item-sheet.tsx
 #: apps/web/src/components/vault/VaultItemDetail.tsx
@@ -5635,10 +5667,6 @@ msgstr "부여 중…"
 msgid "GraphQL endpoint"
 msgstr "GraphQL 엔드포인트"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "Grok Bot"
-msgstr "Grok 봇"
-
 #: apps/mobile/app/_layout.tsx
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/inbox/archived-bot-list.ios.tsx
@@ -5835,6 +5863,11 @@ msgstr "시간"
 msgid "hours"
 msgstr "시간"
 
+#: apps/mobile/app/(settings)/billing.tsx
+#: apps/web/src/components/billing/ComputerUsage.tsx
+msgid "Hours by computer"
+msgstr ""
+
 #: apps/mobile/app/(settings)/signup-survey.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
 msgid "How big is your team?"
@@ -5930,6 +5963,7 @@ msgid "Import"
 msgstr "가져오기"
 
 #: apps/web/src/components/settings/AccountDataSettings.tsx
+#: apps/web/src/pages/shell/bots/agent-import-dialog.tsx
 #: apps/web/src/pages/shell/bots/agent-import.tsx
 msgid "Import an agent"
 msgstr "에이전트 가져오기"
@@ -6440,8 +6474,10 @@ msgstr "음성 서비스를 불러오는 중…"
 #: apps/web/src/pages/plugins/PluginSubmissionsPanel.tsx
 #: apps/web/src/pages/routines/RoutineRunHistory.tsx
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
+#: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/chat/transcript.tsx
 #: apps/web/src/pages/space/Artifacts.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Loading…"
 msgstr "불러오는 중…"
 
@@ -7278,6 +7314,10 @@ msgstr "봇 없음"
 msgid "No bots match"
 msgstr "일치하는 봇 없음"
 
+#: packages/i18n/src/computer-usage.ts
+msgid "No computer hours used yet"
+msgstr ""
+
 #: apps/mobile/components/thread/message-bubble.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
@@ -7441,9 +7481,11 @@ msgstr "웹사이트와 비밀번호 열을 찾을 수 없습니다."
 
 #: apps/mobile/app/(settings)/billing.tsx
 #: apps/mobile/app/(settings)/spending-limit.tsx
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/settings/spending-limit-row.tsx
 #: apps/mobile/components/vault/vault-item-editor.tsx
 #: apps/web/src/components/billing/SpendingLimitSettings.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/components/vault/VaultItemEditor.tsx
 msgid "None"
 msgstr "없음"
@@ -7674,6 +7716,10 @@ msgstr "봇을 만든 사람만 웹훅 키를 설정할 수 있습니다."
 msgid "Only the owner of this account can choose a plan."
 msgstr "이 계정의 소유자만 요금제를 선택할 수 있습니다."
 
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "Only this bot"
+msgstr ""
+
 #: apps/mobile/app/page-share.tsx
 #: apps/web/src/components/pages/SharePopover.tsx
 msgid "Only you"
@@ -7795,10 +7841,6 @@ msgstr "OpenAI 호환 서버 주소"
 msgid "OpenAPI JSON"
 msgstr "OpenAPI JSON"
 
-#: apps/web/src/pages/shell/bots/agent-import.tsx
-msgid "OpenClaw or Hermes"
-msgstr "OpenClaw 또는 Hermes"
-
 #: apps/web/src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "브라우저의 인쇄 대화상자를 엽니다. 대상으로 PDF로 저장을 선택하세요."
@@ -7816,10 +7858,6 @@ msgstr "선택 사항"
 #: apps/web/src/pages/integrations/McpServerForm.tsx
 msgid "Optional header value"
 msgstr "선택 사항인 헤더 값"
-
-#: apps/mobile/components/settings/social-sign-in-buttons.tsx
-msgid "or"
-msgstr "또는"
 
 #: apps/mobile/app/(settings)/model-connection.tsx
 msgid "Or connect an API key"
@@ -7864,6 +7902,10 @@ msgstr "OTA {id}"
 #: apps/mobile/lib/platform/app-version.ts
 msgid "OTA {id}, {date}"
 msgstr "OTA {id}, {date}"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Other computers"
+msgstr ""
 
 #: apps/mobile/components/models/compatible-endpoint-form.tsx
 #: apps/web/src/components/models/FoundModelPicker.tsx
@@ -8264,6 +8306,10 @@ msgstr "개인정보 처리방침"
 #: apps/web/src/pages/shell/bots/bot-settings-sections.tsx
 msgid "Private"
 msgstr "Bot 전용"
+
+#: packages/i18n/src/computer-usage.ts
+msgid "Private Computer"
+msgstr ""
 
 #: apps/web/src/pages/shell/bots/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -9516,6 +9562,14 @@ msgstr "녹음 보내기"
 msgid "Send reset link"
 msgstr "재설정 링크 보내기"
 
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to {assistantName}"
+msgstr ""
+
+#: apps/web/src/pages/shell/bots/agent-import.tsx
+msgid "Send this prompt to your assistant"
+msgstr ""
+
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
 msgstr "Enter 키로 전송"
@@ -9527,9 +9581,11 @@ msgstr "Enter 키로 전송"
 msgid "Sending…"
 msgstr "보내는 중…"
 
+#: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/thread/ask-block.tsx
 #: apps/web/src/components/messages/AskCard.tsx
 #: apps/web/src/components/messages/SecretAskCard.tsx
+#: apps/web/src/components/messages/ToolQuestionCard.tsx
 msgid "Sent"
 msgstr "보냄"
 
@@ -9796,10 +9852,6 @@ msgid "Sign in at <0>{0}</0>, then paste the code here."
 msgstr "<0>{0}</0>에서 로그인한 다음 코드를 여기에 붙여넣으세요."
 
 #: apps/mobile/app/sign-in.tsx
-msgid "Sign in to continue to Rakazo"
-msgstr "Rakazo로 계속하려면 로그인하세요"
-
-#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/pages/auth/Auth.tsx
 msgid "Sign in to Rakazo"
 msgstr "Rakazo 로그인"
@@ -9911,10 +9963,6 @@ msgstr "스킬 {position}"
 #: apps/web/src/pages/shell/use-palette-actions.ts
 msgid "Skills"
 msgstr "스킬"
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "Skills join the library all your bots share."
-msgstr "스킬은 모든 봇이 공유하는 라이브러리에 추가됩니다."
 
 #: apps/mobile/app/computer.tsx
 #: apps/mobile/app/new-group.tsx
@@ -10417,6 +10465,7 @@ msgstr "팀 공용"
 
 #: apps/mobile/lib/computers/computer.ts
 #: apps/web/src/pages/shell/computers/computer-view.tsx
+#: packages/i18n/src/computer-usage.ts
 msgid "Team Computer"
 msgstr "팀 컴퓨터"
 
@@ -10682,10 +10731,6 @@ msgstr "이 인증 앱 키를 읽을 수 없습니다."
 #: apps/web/src/pages/shell/bots/use-agent-import-source.ts
 msgid "This backup could not be read."
 msgstr "이 백업을 읽지 못했습니다."
-
-#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
-msgid "This bot"
-msgstr "이 봇"
 
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
@@ -11740,7 +11785,9 @@ msgid "Welcome back"
 msgstr "다시 오신 것을 환영합니다"
 
 #: apps/mobile/app/(settings)/_layout.tsx
+#: apps/mobile/app/sign-in.tsx
 #: apps/web/src/components/account/SignupSurvey.tsx
+#: apps/web/src/pages/auth/Auth.tsx
 msgid "Welcome to Rakazo"
 msgstr "Rakazo에 오신 것을 환영합니다"
 
@@ -11760,6 +11807,10 @@ msgstr "Rakazo가 가장 도와주었으면 하는 일은 무엇인가요?"
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "What do you want me on first?"
 msgstr "무엇부터 시작할까요?"
+
+#: apps/web/src/pages/shell/bots/agent-import-plan.tsx
+msgid "What it remembers"
+msgstr ""
 
 #: apps/web/src/components/teach/TeachComputerOverlay.tsx
 msgid "What result will you demonstrate?"
