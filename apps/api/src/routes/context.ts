@@ -23,6 +23,7 @@ import {
   isAutoReviewCheckerConfigured,
   kickModelCredentialRefresh,
   listAvailablePiCatalog,
+  LOCAL_PROVIDER_ID,
   McpOAuthBroker,
   modelCredentialAuthKindsForSpace,
   modelCreditOfferings,
@@ -282,7 +283,9 @@ export function createRouterContext(deps: RouterDeps) {
               auth.managedProviders?.includes(entry.provider) ||
               // The server's own Claude Code sign-in runs these, so no member connects them.
               (entry.provider === CLAUDE_CODE_PROVIDER_ID &&
-                deps.env.defaultProvider === CLAUDE_CODE_PROVIDER_ID)
+                deps.env.defaultProvider === CLAUDE_CODE_PROVIDER_ID) ||
+              // The operator's local server (RAKAZO_LOCAL_MODELS) carries its own key.
+              entry.provider === LOCAL_PROVIDER_ID
         )
           ? {
               ...entry,
