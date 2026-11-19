@@ -41,6 +41,8 @@ export const BotSchema = z.object({
   color: z.string(),
   avatarSet: BotAvatarSetSchema.optional(),
   notifyOnFinish: z.boolean(),
+  /** Off mutes only replies; ignored while notifyOnFinish is off. */
+  notifyOnReply: z.boolean().default(true),
   pinned: z.boolean(),
   sectionId: Id.nullable(),
   archivedAt: z.string().nullable(),
@@ -155,6 +157,7 @@ export const UpdateBotInput = z
     /** Ignored; installed mobile apps may still send it. */
     selfUpdateInstructions: z.boolean().optional(),
     notifyOnFinish: z.boolean().optional(),
+    notifyOnReply: z.boolean().optional(),
     color: BotAvatarValueSchema.optional(),
     avatarSet: BotAvatarSetSchema.optional(),
     pinned: z.boolean().optional(),

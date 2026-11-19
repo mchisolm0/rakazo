@@ -84,6 +84,7 @@ export default function BotSettingsScreen() {
   const [modelKey, setModelKey] = useState("");
   const [thinkingLevel, setThinkingLevel] = useState("");
   const [notifyOnFinish, setNotifyOnFinish] = useState(true);
+  const [notifyOnReply, setNotifyOnReply] = useState(true);
   const [autoSpeak, setAutoSpeak] = useState(false);
   const [dailyCheckIns, setDailyCheckIns] = useState(true);
   const [crossSpaceCommunication, setCrossSpaceCommunication] = useState(true);
@@ -131,6 +132,18 @@ export default function BotSettingsScreen() {
           await rpc("bots/update", { botId, dailyCheckIns: value });
         },
         onChange: setDailyCheckIns,
+        onError: (err) => setError(errorText(err, t`Could not save bot`)),
+      }),
+    [botId, t],
+  );
+
+  const replySave = useMemo(
+    () =>
+      createQueuedSave<boolean>(true, {
+        save: async (value) => {
+          await rpc("bots/update", { botId, notifyOnReply: value });
+        },
+        onChange: setNotifyOnReply,
         onError: (err) => setError(errorText(err, t`Could not save bot`)),
       }),
     [botId, t],
@@ -196,6 +209,7 @@ export default function BotSettingsScreen() {
         setName(next.name);
         nameSave.reset(next.name);
         notifySave.reset(next.notifyOnFinish ?? true);
+        replySave.reset(next.notifyOnReply);
         setDescription(next.description ?? "");
         setInstructions(next.instructions ?? "");
         setColor(next.color);
@@ -209,6 +223,7 @@ export default function BotSettingsScreen() {
         setThinkingLevel(next.thinkingLevel ?? "");
         setAutoSpeak(next.autoSpeak);
         setNotifyOnFinish(next.notifyOnFinish ?? true);
+        setNotifyOnReply(next.notifyOnReply);
         setDailyCheckIns(next.dailyCheckIns ?? true);
         dailyCheckInsSave.reset(next.dailyCheckIns ?? true);
         setCrossSpaceCommunication(next.crossSpaceCommunication ?? true);
@@ -227,7 +242,7 @@ export default function BotSettingsScreen() {
         );
       })
       .catch((err) => setError(errorText(err, t`Could not load bot`)));
-  }, [botId, dailyCheckInsSave, crossSpaceSave, fleetSave, notifySave, nameSave]);
+  }, [botId, dailyCheckInsSave, crossSpaceSave, fleetSave, notifySave, replySave, nameSave]);
 
   useEffect(() => {
     void Promise.all([rpc("me"), rpc("models/list"), rpc("models/credentials")])
@@ -583,10 +598,17 @@ export default function BotSettingsScreen() {
         <View style={{ marginTop: 24 }}>
           <SettingsGroup label={t`Notifications`}>
             <SettingsSwitch
-              label={t`When it finishes or needs input`}
+              label={t`When it needs input`}
               value={notifyOnFinish}
               onChange={(value) => notifySave.update(value)}
             />
+            {notifyOnFinish ? (
+              <SettingsSwitch
+                label={t`When it finishes`}
+                value={notifyOnReply}
+                onChange={(value) => replySave.update(value)}
+              />
+            ) : null}
           </SettingsGroup>
         </View>
         {botId ? <BotContextCards key={`${botId}-work`} botId={botId} section="work" /> : null}
