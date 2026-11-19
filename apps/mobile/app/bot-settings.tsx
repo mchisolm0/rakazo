@@ -58,6 +58,8 @@ import { deviceVoices, setVoiceForBot, voiceForBot, voiceLabel } from "../lib/vo
 import { loadDeviceVoiceEnabled } from "../lib/voice/device-voice";
 import { stopVoicePlayback } from "../lib/voice/voice";
 
+type BotToggle = "crossSpaceCommunication" | "dailyCheckIns" | "notifyOnReply" | "fleetManagement";
+
 export default function BotSettingsScreen() {
   const rootAvoidsKeyboard = useContext(CallKeyboardContext);
   const sideInsets = useSideInsets();
@@ -114,51 +116,33 @@ export default function BotSettingsScreen() {
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
 
-  const crossSpaceSave = useMemo(
-    () =>
-      createQueuedSave<boolean>(false, {
+  // One queued save per on/off setting, each sending only its own field.
+  const toggleSave = useCallback(
+    (initial: boolean, field: BotToggle, onChange: (value: boolean) => void) =>
+      createQueuedSave<boolean>(initial, {
         save: async (value) => {
-          await rpc("bots/update", { botId, crossSpaceCommunication: value });
+          await rpc("bots/update", { botId, [field]: value });
         },
-        onChange: setCrossSpaceCommunication,
+        onChange,
         onError: (err) => setError(errorText(err, t`Could not save bot`)),
       }),
     [botId, t],
+  );
+  const crossSpaceSave = useMemo(
+    () => toggleSave(false, "crossSpaceCommunication", setCrossSpaceCommunication),
+    [toggleSave],
   );
   const dailyCheckInsSave = useMemo(
-    () =>
-      createQueuedSave<boolean>(true, {
-        save: async (value) => {
-          await rpc("bots/update", { botId, dailyCheckIns: value });
-        },
-        onChange: setDailyCheckIns,
-        onError: (err) => setError(errorText(err, t`Could not save bot`)),
-      }),
-    [botId, t],
+    () => toggleSave(true, "dailyCheckIns", setDailyCheckIns),
+    [toggleSave],
   );
-
   const replySave = useMemo(
-    () =>
-      createQueuedSave<boolean>(true, {
-        save: async (value) => {
-          await rpc("bots/update", { botId, notifyOnReply: value });
-        },
-        onChange: setNotifyOnReply,
-        onError: (err) => setError(errorText(err, t`Could not save bot`)),
-      }),
-    [botId, t],
+    () => toggleSave(true, "notifyOnReply", setNotifyOnReply),
+    [toggleSave],
   );
-
   const fleetSave = useMemo(
-    () =>
-      createQueuedSave<boolean>(false, {
-        save: async (value) => {
-          await rpc("bots/update", { botId, fleetManagement: value });
-        },
-        onChange: setFleetManagement,
-        onError: (err) => setError(errorText(err, t`Could not save bot`)),
-      }),
-    [botId, t],
+    () => toggleSave(false, "fleetManagement", setFleetManagement),
+    [toggleSave],
   );
 
   const notifySave = useMemo(
@@ -476,6 +460,7 @@ export default function BotSettingsScreen() {
         crossSpaceSave.flush(),
         fleetSave.flush(),
         notifySave.flush(),
+        replySave.flush(),
         nameSave.flush(),
       ]);
       router.back();
