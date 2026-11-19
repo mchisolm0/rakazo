@@ -22,7 +22,8 @@ import { ensureVoiceConsent } from "../voice/voice";
 /** A pause long enough to think in; one this long, or a mic that never hears anything, ends it. */
 const DICTATION_PAUSE_MS = 30_000;
 
-export type ComposerDictationStatus = "idle" | "listening" | "transcribing";
+/** `preparing`: the phone readies its speech model before the mic opens; a tap still cancels. */
+export type ComposerDictationStatus = "idle" | "preparing" | "listening" | "transcribing";
 
 /** How long a session hidden during setup waits for the app to come back from a prompt. */
 const RETURN_FROM_PROMPT_MS = 1_000;
@@ -147,12 +148,11 @@ export function useComposerDictation({
     if (session.current !== mine) return;
     // SpeechAnalyzer needs only the microphone, which recording asks for, so it dictates even
     // where live recognition is off or its speech permission is denied. Its first use downloads
-    // the language's model, so the mic shows busy rather than listening meanwhile.
+    // the language's model, so the mic shows it preparing rather than listening meanwhile.
     let onDevice: ReturnType<typeof appleTranscriber> | undefined;
     const deviceTranscriber = () => {
       if (!onDevice) {
-        setStatus("transcribing");
-        onDevice = appleTranscriber(lang);
+        onDevice = appleTranscriber(lang, () => setStatus("preparing"));
         void onDevice.then(() => {
           if (session.current === mine) setStatus("listening");
         });

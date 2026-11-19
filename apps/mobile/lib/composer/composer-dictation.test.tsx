@@ -18,7 +18,12 @@ const voice = vi.hoisted(() => ({
   recordAudio: vi.fn(),
   deleteQuietly: vi.fn(),
   transcribeClip: vi.fn(),
-  appleTranscriber: vi.fn(async (): Promise<((uri: string) => Promise<string>) | null> => null),
+  appleTranscriber: vi.fn(
+    async (
+      _lang: string,
+      _onPreparing: () => void,
+    ): Promise<((uri: string) => Promise<string>) | null> => null,
+  ),
 }));
 
 vi.mock("expo-router", () => ({
@@ -211,14 +216,17 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
   const transcribe = vi.fn(async () => "Pick up milk, then call Sam.");
   const prepared = deferred<typeof transcribe>();
-  voice.appleTranscriber.mockReturnValueOnce(prepared.promise);
+  voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
+    onPreparing();
+    return prepared.promise;
+  });
   voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
     await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
     return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
   });
   await act(async () => toggle());
-  // The first use downloads the language's model, and the mic shows busy until it is ready.
-  await vi.waitFor(() => expect(container.textContent).toBe("transcribing"));
+  // The first use downloads the language's model, and the mic shows it preparing until ready.
+  await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
   expect(voice.recordAudio).not.toHaveBeenCalled();
   await act(async () => prepared.resolve(transcribe));
   await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
@@ -247,14 +255,34 @@ it("drops a session cancelled while the model prepares without asking for speech
   const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
   const dictation = await import("../voice/dictation");
   const prepared = deferred<null>();
-  voice.appleTranscriber.mockReturnValueOnce(prepared.promise);
+  voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
+    onPreparing();
+    return prepared.promise;
+  });
   await act(async () => toggle());
   await vi.waitFor(() => expect(resolveVoiceCallPlan).toHaveBeenCalled());
   const available = vi.mocked(resolveVoiceCallPlan).mock.calls[0]?.[0].dictationAvailable();
-  await vi.waitFor(() => expect(container.textContent).toBe("transcribing"));
+  await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
   await act(async () => app.blur?.());
   await act(async () => prepared.resolve(null));
   expect(await available).toBe(false);
   expect(dictation.available).not.toHaveBeenCalled();
   expect(container.textContent).toBe("idle");
+});
+
+it("cancels on a tap while the model prepares", async () => {
+  const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
+  vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
+  const prepared = deferred<null>();
+  voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
+    onPreparing();
+    return prepared.promise;
+  });
+  await act(async () => toggle());
+  await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
+  await act(async () => toggle());
+  expect(container.textContent).toBe("idle");
+  await act(async () => prepared.resolve(null));
+  expect(container.textContent).toBe("idle");
+  expect(voice.recordAudio).not.toHaveBeenCalled();
 });

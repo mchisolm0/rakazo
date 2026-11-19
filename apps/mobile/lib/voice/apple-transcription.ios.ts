@@ -7,17 +7,20 @@ import { File } from "expo-file-system";
  */
 export async function appleTranscriber(
   lang: string,
+  /** Called only when the phone prepares the language, which can mean downloading its model. */
+  onPreparing: () => void,
 ): Promise<((uri: string) => Promise<string>) | null> {
   if (!AppleTranscription.isAvailable(lang)) return null;
+  onPreparing();
   // isAvailable ignores the language. prepare rejects one SpeechAnalyzer lacks, so the live
-  // recognizer takes it, and downloads the language's model the first time.
-  const ready = await AppleTranscription.prepare(lang).then(
-    () => true,
-    () => false,
+  // recognizer takes it, and otherwise names the locale whose model it installed.
+  const locale = await AppleTranscription.prepare(lang).then(
+    (supported) => supported,
+    () => null,
   );
-  if (!ready) return null;
+  if (!locale) return null;
   return async (uri) => {
-    const result = await AppleTranscription.transcribe(await new File(uri).arrayBuffer(), lang);
+    const result = await AppleTranscription.transcribe(await new File(uri).arrayBuffer(), locale);
     return result.segments
       .map((segment) => segment.text)
       .join(" ")
