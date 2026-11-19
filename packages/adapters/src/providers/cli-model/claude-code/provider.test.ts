@@ -611,17 +611,17 @@ describe.skipIf(process.platform === "win32")("Claude Code CLI provider", () => 
     },
   );
 
-  it.each(["unoffered-tool", "wrong-prefix", "bare-tool"])(
-    "rejects a %s call before publishing it",
-    async (scenario) => {
-      fakeClaude(scenario);
-      const { events, message } = await run(hello);
-      expect(message.stopReason).toBe("error");
-      expect(message.errorMessage).toContain("tool that was not offered");
-      expect(events.some((event) => event.type.startsWith("toolcall"))).toBe(false);
-      expect(events.some((event) => event.type === "done")).toBe(false);
-    },
-  );
+  it.each([
+    ["unoffered-tool", "feedback"],
+    ["wrong-prefix", "mcp__other__lookup"],
+    ["bare-tool", "lookup"],
+  ])("passes a %s call through for the agent loop to answer", async (scenario, name) => {
+    fakeClaude(scenario);
+    const { events, message } = await run(hello);
+    expect(message.stopReason).toBe("toolUse");
+    expect(message.content).toMatchObject([{ type: "toolCall", name }]);
+    expect(events.at(-1)?.type).toBe("done");
+  });
 
   it("redacts secrets from the CLI's error output", async () => {
     fakeClaude("crash");
