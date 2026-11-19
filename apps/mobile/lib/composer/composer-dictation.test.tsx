@@ -210,13 +210,23 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   const dictation = await import("../voice/dictation");
   vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
   const transcribe = vi.fn(async () => "Pick up milk, then call Sam.");
-  voice.appleTranscriber.mockResolvedValueOnce(transcribe);
+  let prepared = (_ready: typeof transcribe) => {};
+  voice.appleTranscriber.mockReturnValueOnce(
+    new Promise((resolve) => {
+      prepared = resolve;
+    }),
+  );
   voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
     await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
     return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
   });
   await act(async () => toggle());
+  // The first use downloads the language's model, and the mic shows busy until it is ready.
+  await vi.waitFor(() => expect(container.textContent).toBe("transcribing"));
+  expect(voice.recordAudio).not.toHaveBeenCalled();
+  await act(async () => prepared(transcribe));
   await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
+  expect(container.textContent).toBe("listening");
   await act(async () => toggle());
   await vi.waitFor(() =>
     expect(words).toEqual([{ text: "Pick up milk, then call Sam.", final: true }]),

@@ -218,8 +218,11 @@ export function useComposerDictation({
     const lang = recognitionLocaleTag(getActiveUiLocale(), await deviceLanguage());
     // Where the phone can transcribe a whole recording, record until the second tap and
     // transcribe once, like a provider would, instead of listening live.
+    // Its first use downloads the language's model, so show the mic busy rather than listening.
+    setStatus("transcribing");
     const transcribe = await appleTranscriber(lang);
     if (session.current !== mine) return;
+    setStatus("listening");
     // The plan above already asked for speech recognition, so the microphone is next.
     if (!(await goLive(mine))) return;
     if (transcribe) {
