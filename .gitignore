@@ -33,6 +33,8 @@ infra/sandboxes/supervisor/dist
 .cache
 artifacts
 !packages/contracts/src/artifacts
+!packages/db/src/artifacts
+!apps/mobile/lib/artifacts
 backups
 test-report
 verify-report
