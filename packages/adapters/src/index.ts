@@ -144,7 +144,6 @@ export * from "./payments/purchase-poll.js";
 export * from "./payments/purchase-service.js";
 export * from "./providers/billing/stripe/stripe-billing.js";
 export { CLAUDE_CODE_PROVIDER_ID } from "./providers/cli-model/claude-code/provider-id.js";
-export { LOCAL_PROVIDER_ID } from "./runtime/pi/models/pi-local-provider-id.js";
 export * from "./providers/cloud-agent/cursor/cursor-cloud-agent.js";
 export { T3CodeConnections } from "./providers/cloud-agent/t3code/t3code-connections.js";
 export * from "./providers/computer/createos/createos-sandbox.js";
@@ -216,6 +215,7 @@ export * from "./runtime/pi/models/pi-codex-catalog.js";
 export * from "./runtime/pi/models/pi-credentials.js";
 export * from "./runtime/pi/models/pi-live-catalog.js";
 export * from "./runtime/pi/models/pi-live-model.js";
+export { LOCAL_PROVIDER_ID } from "./runtime/pi/models/pi-local-provider-id.js";
 export * from "./runtime/pi/models/pi-models.js";
 export * from "./runtime/pi/models/pi-oauth.js";
 export type {
