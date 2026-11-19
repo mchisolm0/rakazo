@@ -378,8 +378,6 @@ export function streamClaudeCode(
       if (options.signal?.aborted) throw new Aborted("Request was aborted");
       const system = getCurrentSystemPrompt(context.messages);
       const tools = getCurrentTools(context.messages);
-      const offeredToolNames = new Set(tools.map((tool) => `${TOOL_PREFIX}${tool.name}`));
-      const offeredCallNames = new Set(tools.map((tool) => tool.name));
       const frames = claudeCodeFrames(context, model);
       files = await mkdtemp(join(tmpdir(), "rakazo-claude-code-request-"));
       const cwd = join(files, "cwd");
@@ -433,7 +431,13 @@ export function streamClaudeCode(
           config,
           JSON.stringify({
             mcpServers: {
-              [TOOL_SERVER]: { type: "stdio", command: process.execPath, args: [server, manifest] },
+              // On desktop the server runs inside Electron, whose binary acts as Node only when asked.
+              [TOOL_SERVER]: {
+                type: "stdio",
+                command: process.execPath,
+                args: [server, manifest],
+                env: { ELECTRON_RUN_AS_NODE: "1" },
+              },
             },
           }),
           { mode: 0o600 },
@@ -568,23 +572,12 @@ export function streamClaudeCode(
               });
             } else if (block.type === "tool_use") {
               const name = String(block.name ?? "");
-              // A call the request did not offer (the CLI's own MCP resource tools, or a deferred
-              // tool named before find_tool lists it) goes to the agent loop under a name no offered
-              // tool has, so the loop answers "not found" and the model can recover. The name keeps
-              // to the API's tool-name characters and leaves room for the prefix when replayed.
-              let callName = name.slice(TOOL_PREFIX.length);
-              if (!offeredToolNames.has(name)) {
-                const called = name.startsWith(TOOL_PREFIX) ? callName : name;
-                const base = `${called.slice(0, 36)}_not_offered`;
-                callName = base;
-                for (let suffix = 2; offeredCallNames.has(callName); suffix += 1) {
-                  callName = `${base}${suffix}`;
-                }
-              }
+              // A name Rakazo did not offer passes through, so the agent loop answers it with
+              // its usual unknown-tool error instead of the run failing.
               output.content.push({
                 type: "toolCall",
                 id: String(block.id ?? ""),
-                name: callName,
+                name: name.startsWith(TOOL_PREFIX) ? name.slice(TOOL_PREFIX.length) : name,
                 arguments: {},
               });
               blocks.set(index, { index: contentIndex, json: "" });
