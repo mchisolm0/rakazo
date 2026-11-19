@@ -143,10 +143,27 @@ export function useComposerDictation({
   }
 
   async function start(mine: Session) {
+    const lang = recognitionLocaleTag(getActiveUiLocale(), await deviceLanguage());
+    if (session.current !== mine) return;
+    // SpeechAnalyzer needs only the microphone, which recording asks for, so it dictates even
+    // where live recognition is off or its speech permission is denied. Its first use downloads
+    // the language's model, so the mic shows busy rather than listening meanwhile.
+    let onDevice: ReturnType<typeof appleTranscriber> | undefined;
+    const deviceTranscriber = () => {
+      if (!onDevice) {
+        setStatus("transcribing");
+        onDevice = appleTranscriber(lang);
+        void onDevice.then(() => {
+          if (session.current === mine) setStatus("listening");
+        });
+      }
+      return onDevice;
+    };
     const plan = await resolveVoiceCallPlan(
       {
         loadDeviceVoiceEnabled,
-        dictationAvailable: dictation.available,
+        dictationAvailable: async () =>
+          (await deviceTranscriber()) !== null || dictation.available(),
         loadVoiceStatus: () => rpc("voice/status"),
       },
       "dictation",
@@ -215,14 +232,10 @@ export function useComposerDictation({
       if (text.trim()) onWordsRef.current(text.trim(), true);
       return;
     }
-    const lang = recognitionLocaleTag(getActiveUiLocale(), await deviceLanguage());
     // Where the phone can transcribe a whole recording, record until the second tap and
     // transcribe once, like a provider would, instead of listening live.
-    // Its first use downloads the language's model, so show the mic busy rather than listening.
-    setStatus("transcribing");
-    const transcribe = await appleTranscriber(lang);
+    const transcribe = await deviceTranscriber();
     if (session.current !== mine) return;
-    setStatus("listening");
     // The plan above already asked for speech recognition, so the microphone is next.
     if (!(await goLive(mine))) return;
     if (transcribe) {

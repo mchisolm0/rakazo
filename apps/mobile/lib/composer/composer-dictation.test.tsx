@@ -210,12 +210,8 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   const dictation = await import("../voice/dictation");
   vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
   const transcribe = vi.fn(async () => "Pick up milk, then call Sam.");
-  let prepared = (_ready: typeof transcribe) => {};
-  voice.appleTranscriber.mockReturnValueOnce(
-    new Promise((resolve) => {
-      prepared = resolve;
-    }),
-  );
+  const prepared = deferred<typeof transcribe>();
+  voice.appleTranscriber.mockReturnValueOnce(prepared.promise);
   voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
     await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
     return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
@@ -224,7 +220,7 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   // The first use downloads the language's model, and the mic shows busy until it is ready.
   await vi.waitFor(() => expect(container.textContent).toBe("transcribing"));
   expect(voice.recordAudio).not.toHaveBeenCalled();
-  await act(async () => prepared(transcribe));
+  await act(async () => prepared.resolve(transcribe));
   await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
   expect(container.textContent).toBe("listening");
   await act(async () => toggle());
@@ -234,4 +230,15 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   expect(transcribe).toHaveBeenCalledWith("file:///clip.m4a");
   expect(voice.deleteQuietly).toHaveBeenCalledWith("file:///clip.m4a");
   expect(dictation.listen).not.toHaveBeenCalled();
+});
+
+it("dictates on the phone without asking for live speech recognition", async () => {
+  const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
+  const dictation = await import("../voice/dictation");
+  voice.appleTranscriber.mockResolvedValueOnce(vi.fn(async () => ""));
+  await act(async () => toggle());
+  await vi.waitFor(() => expect(resolveVoiceCallPlan).toHaveBeenCalled());
+  const deps = vi.mocked(resolveVoiceCallPlan).mock.calls[0]?.[0];
+  expect(await deps?.dictationAvailable()).toBe(true);
+  expect(dictation.available).not.toHaveBeenCalled();
 });
