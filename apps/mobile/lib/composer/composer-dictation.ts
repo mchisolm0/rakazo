@@ -11,9 +11,10 @@ import { Alert, AppState } from "react-native";
 import { captureApiRequestContext, rpc } from "../api/api";
 import { currentSessionGeneration } from "../api/session";
 import { errorText } from "../api/user-error";
-import { recordClip, transcribeClip } from "../calls/call-session";
+import { deleteQuietly, recordAudio, recordClip, transcribeClip } from "../calls/call-session";
 import { resolveVoiceCallPlan } from "../calls/voice-call-entry";
 import { deviceLanguage, getActiveUiLocale } from "../i18n/i18n";
+import { appleTranscriber } from "../voice/apple-transcription";
 import { loadDeviceVoiceEnabled } from "../voice/device-voice";
 import * as dictation from "../voice/dictation";
 import { ensureVoiceConsent } from "../voice/voice";
@@ -53,7 +54,8 @@ type Session = {
 
 /**
  * Tap to dictate into the message box, tap again to stop. It takes the same path a call would:
- * the phone's own recognizer when device voice is on, otherwise the connected voice provider.
+ * the phone's own recognizer when device voice is on (on iOS 26, a recording it transcribes
+ * once you stop), otherwise the connected voice provider.
  */
 export function useComposerDictation({
   disabled,
@@ -216,6 +218,31 @@ export function useComposerDictation({
     const lang = recognitionLocaleTag(getActiveUiLocale(), await deviceLanguage());
     // The plan above already asked for speech recognition, so the microphone is next.
     if (!(await goLive(mine))) return;
+    // Where the phone can transcribe a whole recording, record until the second tap and
+    // transcribe once, like a provider would, instead of listening live.
+    const transcribe = appleTranscriber(lang);
+    if (transcribe) {
+      const stopped = new AbortController();
+      mine.finish = () => {
+        stopped.abort();
+        markTranscribing(mine);
+      };
+      const audio = await recordAudio(mine.cancel.signal, stopped.signal);
+      if (!audio) {
+        end(mine);
+        return;
+      }
+      try {
+        if (session.current !== mine) return;
+        markTranscribing(mine);
+        mine.finish = () => {};
+        const text = await transcribe(audio.uri);
+        if (end(mine) && text) onWordsRef.current(text, true);
+      } finally {
+        deleteQuietly(audio.uri);
+      }
+      return;
+    }
     // A stop tap while the recognizer is still loading lands once it has started.
     let stopRequested = false;
     mine.finish = () => {
