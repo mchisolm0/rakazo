@@ -242,3 +242,19 @@ it("dictates on the phone without asking for live speech recognition", async () 
   expect(await deps?.dictationAvailable()).toBe(true);
   expect(dictation.available).not.toHaveBeenCalled();
 });
+
+it("drops a session cancelled while the model prepares without asking for speech", async () => {
+  const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
+  const dictation = await import("../voice/dictation");
+  const prepared = deferred<null>();
+  voice.appleTranscriber.mockReturnValueOnce(prepared.promise);
+  await act(async () => toggle());
+  await vi.waitFor(() => expect(resolveVoiceCallPlan).toHaveBeenCalled());
+  const available = vi.mocked(resolveVoiceCallPlan).mock.calls[0]?.[0].dictationAvailable();
+  await vi.waitFor(() => expect(container.textContent).toBe("transcribing"));
+  await act(async () => app.blur?.());
+  await act(async () => prepared.resolve(null));
+  expect(await available).toBe(false);
+  expect(dictation.available).not.toHaveBeenCalled();
+  expect(container.textContent).toBe("idle");
+});

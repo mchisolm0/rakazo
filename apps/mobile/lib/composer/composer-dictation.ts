@@ -162,8 +162,12 @@ export function useComposerDictation({
     const plan = await resolveVoiceCallPlan(
       {
         loadDeviceVoiceEnabled,
-        dictationAvailable: async () =>
-          (await deviceTranscriber()) !== null || dictation.available(),
+        // A session dropped meanwhile must not show busy again or prompt for speech.
+        dictationAvailable: async () => {
+          if (session.current !== mine) return false;
+          if ((await deviceTranscriber()) !== null) return true;
+          return session.current === mine && dictation.available();
+        },
         loadVoiceStatus: () => rpc("voice/status"),
       },
       "dictation",
