@@ -13,9 +13,10 @@ export async function appleTranscriber(
   if (!AppleTranscription.isAvailable(lang)) return null;
   onPreparing();
   // isAvailable ignores the language. prepare rejects one SpeechAnalyzer lacks, so the live
-  // recognizer takes it, and otherwise names the locale whose model it installed.
+  // recognizer takes it, and otherwise names the locale whose model it installed. Builds from
+  // before patches/@react-native-ai__apple@0.12.0.patch name none, so the tag stands in.
   const locale = await AppleTranscription.prepare(lang).then(
-    (supported) => supported,
+    (supported: string | null | undefined) => supported || lang,
     () => null,
   );
   if (!locale) return null;
