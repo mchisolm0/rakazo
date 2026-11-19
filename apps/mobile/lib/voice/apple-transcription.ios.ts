@@ -3,13 +3,20 @@ import { File } from "expo-file-system";
 
 /**
  * iOS 26's on-device SpeechAnalyzer, which transcribes a finished recording in one pass, so
- * pauses never cut a message short. Null where the device lacks it.
+ * pauses never cut a message short. Null where the device or its language lacks it.
  */
-export function appleTranscriber(lang: string): ((uri: string) => Promise<string>) | null {
+export async function appleTranscriber(
+  lang: string,
+): Promise<((uri: string) => Promise<string>) | null> {
   if (!AppleTranscription.isAvailable(lang)) return null;
+  // isAvailable ignores the language. prepare rejects one SpeechAnalyzer lacks, so the live
+  // recognizer takes it, and downloads the language's model the first time.
+  const ready = await AppleTranscription.prepare(lang).then(
+    () => true,
+    () => false,
+  );
+  if (!ready) return null;
   return async (uri) => {
-    // Downloads the language's model the first time; later calls return at once.
-    await AppleTranscription.prepare(lang);
     const result = await AppleTranscription.transcribe(await new File(uri).arrayBuffer(), lang);
     return result.segments
       .map((segment) => segment.text)

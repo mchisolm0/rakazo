@@ -18,7 +18,7 @@ const voice = vi.hoisted(() => ({
   recordAudio: vi.fn(),
   deleteQuietly: vi.fn(),
   transcribeClip: vi.fn(),
-  appleTranscriber: vi.fn((): ((uri: string) => Promise<string>) | null => null),
+  appleTranscriber: vi.fn(async (): Promise<((uri: string) => Promise<string>) | null> => null),
 }));
 
 vi.mock("expo-router", () => ({
@@ -210,7 +210,7 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   const dictation = await import("../voice/dictation");
   vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
   const transcribe = vi.fn(async () => "Pick up milk, then call Sam.");
-  voice.appleTranscriber.mockReturnValueOnce(transcribe);
+  voice.appleTranscriber.mockResolvedValueOnce(transcribe);
   voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
     await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
     return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
