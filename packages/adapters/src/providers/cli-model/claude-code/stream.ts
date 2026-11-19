@@ -431,7 +431,13 @@ export function streamClaudeCode(
           config,
           JSON.stringify({
             mcpServers: {
-              [TOOL_SERVER]: { type: "stdio", command: process.execPath, args: [server, manifest] },
+              // On desktop the server runs inside Electron, whose binary acts as Node only when asked.
+              [TOOL_SERVER]: {
+                type: "stdio",
+                command: process.execPath,
+                args: [server, manifest],
+                env: { ELECTRON_RUN_AS_NODE: "1" },
+              },
             },
           }),
           { mode: 0o600 },
