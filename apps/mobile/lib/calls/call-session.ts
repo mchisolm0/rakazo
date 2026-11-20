@@ -1029,7 +1029,11 @@ export async function recordAudio(
     // A dictation stopped before the microphone opened has nothing to send.
     if (signal.aborted || until?.aborted) return null;
     recorder.record();
-    onRecording?.();
+    if (onRecording) {
+      // iOS can decline to start, such as during an audio interruption, without throwing.
+      if (!recorder.isRecording) throw new ExpectedTurnFailure(t`Could not start the microphone.`);
+      onRecording();
+    }
     let quietMs = 0;
     let metered = false;
     const pollMs = onLevel ? LEVEL_POLL_MS : METER_POLL_MS;
