@@ -29,6 +29,9 @@ import type { RefObject } from "react";
 import { useEffect, useState } from "react";
 import { useSpaceQueries } from "../../lib/query/query";
 
+/** Rounds down to the cent; toFixed first, so 0.29 * 100 = 28.999… still reads 29 cents. */
+const floorCents = (usd: number) => Math.floor(Number((usd * 100).toFixed(6))) / 100;
+
 type Totals = Pick<UsageBreakdownModel, UsageTotalField | "incomplete">;
 
 export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivElement | null> }) {
@@ -57,16 +60,17 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
   const count = new Intl.NumberFormat(i18n.locale);
   const usd = new Intl.NumberFormat(i18n.locale, { style: "currency", currency: "USD" });
   const number = (value: number | null | undefined) => (value == null ? "—" : count.format(value));
-  // A total that leaves out calls without the figure reads as a floor.
+  // A total that leaves out calls without the figure reads as a floor. An API rolled back
+  // behind this page sends no `incomplete`, so it reads as complete.
   const total = (totals: Totals | undefined, field: UsageTotalField) => {
     const value = totals?.[field];
     if (value == null) return "—";
     if (field !== "costUsd") {
       const text = count.format(value);
-      return totals?.incomplete.includes(field) ? `${text}+` : text;
+      return totals?.incomplete?.includes(field) ? `${text}+` : text;
     }
     // A floor rounds down, so it never claims more than the calls that report a cost.
-    if (totals?.incomplete.includes(field)) return `${usd.format(Math.floor(value * 100) / 100)}+`;
+    if (totals?.incomplete?.includes(field)) return `${usd.format(floorCents(value))}+`;
     return value > 0 && value < 0.01 ? `<${usd.format(0.01)}` : usd.format(value);
   };
 

@@ -89,6 +89,7 @@ export const UsageBreakdownBotSchema = z.object({
   totalTokens: z.number().nullable(),
   costUsd: z.number().nullable(),
   modelCalls: z.number(),
+  incomplete: z.array(UsageTotalFieldSchema),
 });
 export type UsageBreakdownBot = z.infer<typeof UsageBreakdownBotSchema>;
 

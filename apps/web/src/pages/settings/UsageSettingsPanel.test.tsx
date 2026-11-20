@@ -224,12 +224,12 @@ it("marks totals that leave out calls without a count as a floor", async () => {
       const usage = usageFor(input);
       return {
         ...usage,
-        totals: { ...usage.totals, costUsd: 0.0165, incomplete: ["totalTokens", "costUsd"] },
+        totals: { ...usage.totals, costUsd: 0.29, incomplete: ["totalTokens", "costUsd"] },
       };
     });
     await panel.pick("Today");
-    // A floor rounds down rather than up.
-    expect(panel.totals()).toEqual(["3", "467+", "$0.01+"]);
+    // A floor rounds down, but not below an exact cent.
+    expect(panel.totals()).toEqual(["3", "467+", "$0.29+"]);
   } finally {
     await panel.unmount();
   }
