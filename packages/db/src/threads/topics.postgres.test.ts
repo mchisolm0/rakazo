@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { deferred } from "@rakazo/core/test-async";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "../database/client.js";
 import { createDb } from "../database/client.js";
 import { asSystem, runAsSystem, runAsTenant } from "../database/row-security.js";
@@ -242,34 +243,55 @@ describePostgres("topics in a bot chat (PostgreSQL)", () => {
     expect(await system.thread.findUnique({ where: { id: topicId! } })).not.toBeNull();
   });
 
-  it("clearing the chat stops runs working in its topics", async () => {
+  it("clearing the chat stops runs in its topics, including one a send is starting", async () => {
     const system = asSystem(prisma);
     const [topic] = await topics();
-    const task = await system.task.create({
-      data: {
-        spaceId: space,
-        botId,
-        threadId: topic!.id,
-        userId: ada,
-        prompt: "",
-        status: "running",
-      },
+    const startRun = async (tx: Pick<PrismaClient, "task" | "run">) => {
+      const task = await tx.task.create({
+        data: {
+          spaceId: space,
+          botId,
+          threadId: topic!.id,
+          userId: ada,
+          prompt: "",
+          status: "running",
+        },
+      });
+      return tx.run.create({
+        data: {
+          spaceId: space,
+          botId,
+          threadId: topic!.id,
+          taskId: task.id,
+          userId: ada,
+          status: "running",
+          trigger: "user",
+        },
+      });
+    };
+    const working = await startRun(system);
+    // A send to the topic holds its row, as sends do, while the chat is cleared.
+    const locked = deferred();
+    const release = deferred();
+    const sending = system.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM threads WHERE id = ${topic!.id} FOR UPDATE`;
+      const run = await startRun(tx);
+      locked.resolve();
+      await release.promise;
+      return run;
     });
-    const working = await system.run.create({
-      data: {
-        spaceId: space,
-        botId,
-        threadId: topic!.id,
-        taskId: task.id,
-        userId: ada,
-        status: "running",
-        trigger: "user",
-      },
+    await locked.promise;
+    const clearing = as(() => clearThread(prisma, { spaceId: space, threadId: chatId, botId }));
+    // The clear reaches the send's lock before the send commits.
+    await vi.waitFor(async () => {
+      const [waiting] = await system.$queryRaw<Array<{ count: number }>>`
+        SELECT count(*)::int AS count FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event_type = 'Lock'`;
+      expect(waiting?.count).toBeGreaterThan(0);
     });
-    const cleared = await as(() =>
-      clearThread(prisma, { spaceId: space, threadId: chatId, botId }),
-    );
-    expect(cleared.cancelledRunIds).toContain(working.id);
+    release.resolve();
+    const [started, cleared] = await Promise.all([sending, clearing]);
+    expect(cleared.cancelledRunIds).toEqual(expect.arrayContaining([working.id, started.id]));
     expect(await system.thread.findUnique({ where: { id: topic!.id } })).toBeNull();
   });
 });

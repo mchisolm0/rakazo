@@ -29,15 +29,21 @@ export async function openTopic(
   const found = await existing();
   if (found) return found.id;
   try {
-    const created = await prisma.thread.create({
-      data: {
-        spaceId: message.thread.spaceId,
-        userId: message.thread.userId,
-        parentMessageId: message.id,
-      },
-      select: { id: true },
+    return await prisma.$transaction(async (tx) => {
+      // Shares the chat's lock, so a clear or prune that holds it sees this topic or outlasts it.
+      await tx.$queryRaw`SELECT id FROM threads WHERE id = ${input.mainThreadId} FOR SHARE`;
+      const root = await tx.message.findUnique({ where: { id: message.id }, select: { id: true } });
+      if (!root) return null;
+      const created = await tx.thread.create({
+        data: {
+          spaceId: message.thread.spaceId,
+          userId: message.thread.userId,
+          parentMessageId: message.id,
+        },
+        select: { id: true },
+      });
+      return created.id;
     });
-    return created.id;
   } catch (error) {
     // Two opens of the same message at once: the other one started it.
     if (!isUniqueViolation(error)) throw error;

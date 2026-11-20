@@ -90,6 +90,7 @@ import {
   pauseRunForTakeover,
   releaseUserControl,
 } from "./thread-takeover.js";
+import { lockChatTopics } from "./topic-locks.js";
 
 export { THREAD_LOCK_TRANSACTION_OPTIONS };
 
@@ -317,13 +318,9 @@ export async function clearThread(
       select: { nextMessageSeq: true, historyCompactionGeneration: true, userId: true },
     });
     await clearThreadReads(tx, input.threadId);
-    // Topics hang off the chat's messages and go with them, so their runs stop here too.
-    const topicThreadIds = (
-      await tx.thread.findMany({
-        where: { spaceId: input.spaceId, parentMessage: { threadId: input.threadId } },
-        select: { id: true },
-      })
-    ).map((topic) => topic.id);
+    // Topics hang off the chat's messages and go with them, so their runs stop here too. Their
+    // rows are locked as a send to them locks them, so none can start a run until this commits.
+    const topicThreadIds = await lockChatTopics(tx, input.threadId);
     const activeRuns = await tx.run.findMany({
       where: {
         spaceId: input.spaceId,

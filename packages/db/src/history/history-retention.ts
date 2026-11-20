@@ -9,6 +9,7 @@ import {
   withTransactionRetry,
 } from "../database/transaction-retry.js";
 import { conversationRunsWhere } from "../runs/cancel-runs.js";
+import { lockChatTopics } from "../threads/topic-locks.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** About a century: far enough to mean never, and well inside the range of a date. */
@@ -71,6 +72,8 @@ async function pruneThreadChunk(
         select: { message: { select: { seq: true } } },
       });
       // A message's topic goes with it, so one whose topic is still in use is kept, with all after.
+      // Locked first, as a reply locks it, so no reply lands between this check and the delete.
+      await lockChatTopics(tx, threadId);
       const liveTopicRoot = await tx.message.findFirst({
         where: {
           threadId,
