@@ -185,6 +185,8 @@ function replyBlockText(block: MessageBlock): string {
       return block.name;
     case "app":
       return block.server;
+    case "buttons":
+      return block.buttons.map((button) => button.label).join(", ");
     case "tool_question":
       return block.question.source;
     case "import_setup":

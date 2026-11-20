@@ -80,6 +80,15 @@ export const AskReceipt = z.object({
 });
 export type AskReceipt = z.infer<typeof AskReceipt>;
 
+export const MAX_LINK_BUTTONS = 4;
+
+/** A button that opens its URL. The server checks the scheme before it stores one. */
+export const LinkButton = z.object({
+  label: z.string().trim().min(1).max(60),
+  url: z.string().max(2048),
+});
+export type LinkButton = z.infer<typeof LinkButton>;
+
 export const MessageBlock = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("text"), text: z.string() }),
   z.object({
@@ -376,6 +385,11 @@ export const MessageBlock = z.discriminatedUnion("kind", [
     fromLabel: z.string(),
     text: z.string(),
     hop: z.number().int().nonnegative().optional(),
+  }),
+  /** Link buttons under a bot's post; each opens its URL. */
+  z.object({
+    kind: z.literal("buttons"),
+    buttons: z.array(LinkButton).min(1).max(MAX_LINK_BUTTONS),
   }),
   z.object({
     /** Shown in the sending bot's own chat, so the user can see what it sent. */

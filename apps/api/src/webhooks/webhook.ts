@@ -12,6 +12,7 @@ import {
   WEBHOOK_MAX_BODY_BYTES,
   webhookDeliveryResponse,
 } from "./webhook-inbound.js";
+import { postWebhookMessage, webhookPostSchema } from "./webhook-post.js";
 
 export {
   formatUntrustedDeliveryPayload,
@@ -32,6 +33,7 @@ export {
 
 export function mountWebhookHttpRoutes(app: Hono, deps: WebhookDeps) {
   const secretCache: WebhookSecretCache = new Map();
+  const postSchema = webhookPostSchema(deps.linkSchemes);
 
   app.post("/api/v1/bots/:botId/webhook", async (c) => {
     const unauthorized = () => c.json({ error: "Unauthorized" }, 401);
@@ -55,6 +57,13 @@ export function mountWebhookHttpRoutes(app: Hono, deps: WebhookDeps) {
     // Same 401 for missing bot, missing secret, and bad bearer so bot ids are not enumerable.
     if (!target || !hasValidBearerToken(c.req.header("authorization"), target.expected)) {
       return unauthorized();
+    }
+
+    const payload = parseWebhookPayload(raw, c.req.header("content-type"));
+    if ("post" in payload) {
+      const post = postSchema.safeParse(payload.post);
+      if (!post.success) return c.json({ error: "Invalid post" }, 400);
+      return c.json(await postWebhookMessage(deps, target, post.data));
     }
 
     const webhookRoutines = await deps.prisma.routine.findMany({
@@ -81,7 +90,6 @@ export function mountWebhookHttpRoutes(app: Hono, deps: WebhookDeps) {
       return c.json({ ok: true, ignored: true });
     }
 
-    const payload = parseWebhookPayload(raw, c.req.header("content-type"));
     const eventPrompt = formatWebhookPrompt(payload);
 
     // A payload id often names the resource, not the delivery, so only byte-identical retries collapse.

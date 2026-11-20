@@ -402,6 +402,19 @@ describe("thread cards", () => {
     expect(onLongPress).toHaveBeenCalledTimes(1);
   });
 
+  it("opens a link button's URL under the post's text", () => {
+    renderBlocks([
+      text("Deploy finished"),
+      { kind: "buttons", buttons: [{ label: "Open in T3", url: "t3code://threads/env/thread" }] },
+    ]);
+    expect(container.textContent).toContain("Deploy finished");
+    const button = [...container.querySelectorAll("button")].find(
+      (element) => element.textContent === "Open in T3",
+    );
+    act(() => button!.click());
+    expect(Linking.openURL).toHaveBeenCalledWith("t3code://threads/env/thread");
+  });
+
   it("opens helpers independently and keeps each header in view through the toggle callback", () => {
     const onLongPress = vi.fn();
     const measurements: number[][] = [];
