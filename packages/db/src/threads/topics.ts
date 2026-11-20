@@ -43,7 +43,7 @@ export async function openTopic(
         select: { id: true },
       });
       return created.id;
-    });
+    }, THREAD_LOCK_TRANSACTION_OPTIONS);
   } catch (error) {
     // Two opens of the same message at once: the other one started it.
     if (!isUniqueViolation(error)) throw error;

@@ -270,6 +270,40 @@ describePostgres("topics in a bot chat (PostgreSQL)", () => {
       });
     };
     const working = await startRun(system);
+    // A background helper the topic started works in a thread of its own.
+    const card = await as(() =>
+      createThreadMessage(prisma, {
+        threadId: topic!.id,
+        role: "bot",
+        botId,
+        blocks: [{ kind: "text", text: "Checking the crash logs." }],
+      }),
+    );
+    const helperThread = await system.thread.create({
+      data: { spaceId: space, userId: ada, helperBotId: botId },
+    });
+    const helperTask = await system.task.create({
+      data: {
+        spaceId: space,
+        botId,
+        threadId: helperThread.id,
+        userId: ada,
+        prompt: "",
+        status: "running",
+      },
+    });
+    const helper = await system.run.create({
+      data: {
+        spaceId: space,
+        botId,
+        threadId: helperThread.id,
+        taskId: helperTask.id,
+        userId: ada,
+        status: "running",
+        trigger: "helper",
+        sourceMessageId: card.id,
+      },
+    });
     // A send to the topic holds its row, as sends do, while the chat is cleared.
     const locked = deferred();
     const release = deferred();
@@ -291,7 +325,9 @@ describePostgres("topics in a bot chat (PostgreSQL)", () => {
     });
     release.resolve();
     const [started, cleared] = await Promise.all([sending, clearing]);
-    expect(cleared.cancelledRunIds).toEqual(expect.arrayContaining([working.id, started.id]));
+    expect(cleared.cancelledRunIds).toEqual(
+      expect.arrayContaining([working.id, started.id, helper.id]),
+    );
     expect(await system.thread.findUnique({ where: { id: topic!.id } })).toBeNull();
   });
 });

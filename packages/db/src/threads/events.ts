@@ -324,7 +324,8 @@ export async function clearThread(
     const activeRuns = await tx.run.findMany({
       where: {
         spaceId: input.spaceId,
-        OR: [conversationRunsWhere(input.threadId), { threadId: { in: topicThreadIds } }],
+        // Each topic is a conversation too: its own runs and the helpers it started.
+        OR: [input.threadId, ...topicThreadIds].map(conversationRunsWhere),
         status: { in: ["queued", "leased", "running", "waiting_input", "waiting_takeover"] },
       },
       select: { id: true, taskId: true, userId: true, spaceId: true },
@@ -342,7 +343,7 @@ export async function clearThread(
             runs: {
               some: {
                 trigger: BACKGROUND_HELPER_TRIGGER,
-                sourceMessage: { threadId: input.threadId },
+                sourceMessage: { threadId: { in: [input.threadId, ...topicThreadIds] } },
               },
             },
           },

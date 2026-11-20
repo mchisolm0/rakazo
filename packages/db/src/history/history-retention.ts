@@ -1,4 +1,4 @@
-import { ACTIVE_RUN_STATUSES } from "@rakazo/core";
+import { ACTIVE_RUN_STATUSES, BACKGROUND_HELPER_TRIGGER } from "@rakazo/core";
 import { bestEffort } from "@rakazo/logging";
 import { createRetentionPruner } from "../account/security-events.js";
 import type { PrismaClient } from "../database/client.js";
@@ -82,6 +82,19 @@ async function pruneThreadChunk(
               OR: [
                 { messages: { some: { createdAt: { gte: cutoff } } } },
                 { runs: { some: { status: { in: [...ACTIVE_RUN_STATUSES] } } } },
+                // A helper started there runs in its own thread but answers in the topic.
+                {
+                  messages: {
+                    some: {
+                      sourceRuns: {
+                        some: {
+                          trigger: BACKGROUND_HELPER_TRIGGER,
+                          status: { in: [...ACTIVE_RUN_STATUSES] },
+                        },
+                      },
+                    },
+                  },
+                },
               ],
             },
           },
