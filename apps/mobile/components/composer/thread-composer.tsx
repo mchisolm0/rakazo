@@ -607,7 +607,7 @@ export function ThreadComposer({
           )}
           <View
             style={{
-              // Hidden, not unmounted, so the native field keeps its text and size.
+              // The bar takes the box's place; the field's text is kept in the draft state.
               display: dictation.status === "idle" ? "flex" : "none",
               flex: stacked ? undefined : 1,
               // Room for the text comes first; the model chip shrinks instead.
@@ -823,7 +823,11 @@ export function ThreadComposer({
                   accessibilityRole="button"
                   accessibilityLabel={t`Dictate`}
                   hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                  onPress={dictation.toggle}
+                  onPress={() => {
+                    // The field leaves the screen while dictating, so it must not keep focus.
+                    inputRef.current?.blur();
+                    dictation.toggle();
+                  }}
                   style={{ marginBottom: pillInset }}
                 >
                   <GlassSurface

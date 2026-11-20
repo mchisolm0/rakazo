@@ -77,6 +77,8 @@ export function useComposerDictation({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   // Read on the UI thread by the waveform, so a level never re-renders the composer.
   const levels = useSharedValue<readonly number[]>(QUIET_LEVELS);
+  // The JS side's copy, so a new level never reads the shared value back from the UI thread.
+  const levelBuffer = useRef<readonly number[]>(QUIET_LEVELS);
   const session = useRef<Session | null>(null);
   const onWordsRef = useRef(onWords);
   onWordsRef.current = onWords;
@@ -90,7 +92,17 @@ export function useComposerDictation({
   }
 
   function pushLevel(decibels: number | undefined) {
-    levels.value = withLevel(levels.value, decibels);
+    levelBuffer.current = withLevel(levelBuffer.current, decibels);
+    levels.value = levelBuffer.current;
+  }
+
+  /** The microphone is capturing: the timer starts and finish is enabled. */
+  function markListening(mine: Session) {
+    if (session.current !== mine) return;
+    levelBuffer.current = QUIET_LEVELS;
+    levels.value = QUIET_LEVELS;
+    setStartedAt(Date.now());
+    setStatus("listening");
   }
 
   /** The microphone is closed. Blur and background must not drop the words still in flight. */
@@ -148,9 +160,6 @@ export function useComposerDictation({
       return false;
     }
     mine.live = true;
-    levels.value = QUIET_LEVELS;
-    setStartedAt(Date.now());
-    setStatus("listening");
     return true;
   }
 
@@ -171,6 +180,7 @@ export function useComposerDictation({
       };
       const audio = await recordAudio(mine.cancel.signal, stopped.signal, {
         onLevel: (decibels) => pushLevel(decibels),
+        onRecording: () => markListening(mine),
         onDevice: true,
       });
       if (!audio) {
@@ -232,6 +242,7 @@ export function useComposerDictation({
       };
       const clip = await recordClip(mine.cancel.signal, stopped.signal, {
         onLevel: (decibels) => pushLevel(decibels),
+        onRecording: () => markListening(mine),
       });
       if (session.current !== mine) return;
       // A sign-in to another account meanwhile must not send this audio with the old session.
@@ -264,6 +275,7 @@ export function useComposerDictation({
       return;
     }
     if (!(await goLive(mine))) return;
+    markListening(mine);
     // A stop tap while the recognizer is still loading lands once it has started.
     let stopRequested = false;
     mine.finish = () => {
@@ -291,7 +303,7 @@ export function useComposerDictation({
       return;
     }
     if (disabled) return;
-    // Until the microphone opens, the bar shows it preparing and finishing cancels.
+    // Until the microphone opens, the bar shows it preparing and only cancel stops it.
     const mine: Session = {
       cancel: new AbortController(),
       finish: () => cancel(),

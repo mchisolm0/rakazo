@@ -976,6 +976,8 @@ export async function recordClip(
 type RecordOptions = {
   /** Each metering read in dBFS, for a live waveform; undefined while the recorder has none. */
   onLevel?: (decibels: number | undefined) => void;
+  /** The recorder started capturing, after any permission prompt and audio setup. */
+  onRecording?: () => void;
   /** The clip never leaves the phone, so it keeps the recorder's full quality. */
   onDevice?: boolean;
 };
@@ -983,7 +985,7 @@ type RecordOptions = {
 export async function recordAudio(
   signal: AbortSignal,
   until?: AbortSignal,
-  { onLevel, onDevice = false }: RecordOptions = {},
+  { onLevel, onRecording, onDevice = false }: RecordOptions = {},
 ): Promise<{ uri: string; mimeType: string } | null> {
   const { AudioModule, RecordingPresets } = await import("expo-audio");
   if (signal.aborted) return null;
@@ -1027,6 +1029,7 @@ export async function recordAudio(
     // A dictation stopped before the microphone opened has nothing to send.
     if (signal.aborted || until?.aborted) return null;
     recorder.record();
+    onRecording?.();
     let quietMs = 0;
     let metered = false;
     const pollMs = onLevel ? LEVEL_POLL_MS : METER_POLL_MS;

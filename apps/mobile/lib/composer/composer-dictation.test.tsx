@@ -121,14 +121,17 @@ beforeEach(() => {
   app.appState.clear();
   app.blur = undefined;
   words = [];
-  voice.recordClip.mockImplementation(async (_cancel: AbortSignal, until: AbortSignal) => {
-    if (!until.aborted) {
-      await new Promise<void>((resolve) => {
-        until.addEventListener("abort", () => resolve(), { once: true });
-      });
-    }
-    return { base64: "clip", mimeType: "audio/m4a" };
-  });
+  voice.recordClip.mockImplementation(
+    async (_cancel: AbortSignal, until: AbortSignal, options?: { onRecording?: () => void }) => {
+      options?.onRecording?.();
+      if (!until.aborted) {
+        await new Promise<void>((resolve) => {
+          until.addEventListener("abort", () => resolve(), { once: true });
+        });
+      }
+      return { base64: "clip", mimeType: "audio/m4a" };
+    },
+  );
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -217,10 +220,13 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   const transcribe = vi.fn(async () => "Pick up milk, then call Sam.");
   const prepared = deferred<typeof transcribe>();
   voice.appleTranscriber.mockImplementationOnce(() => prepared.promise);
-  voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
-    await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
-    return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
-  });
+  voice.recordAudio.mockImplementationOnce(
+    async (_cancel: AbortSignal, until: AbortSignal, options?: { onRecording?: () => void }) => {
+      options?.onRecording?.();
+      await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
+      return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
+    },
+  );
   await act(async () => toggle());
   // The first use downloads the language's model, and the mic shows it preparing until ready.
   await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
@@ -240,10 +246,13 @@ it("dictates on the phone at full quality even when a hosted voice reads replies
   const dictation = await import("../voice/dictation");
   // The default mocks: device voice off, a provider that transcribes.
   voice.appleTranscriber.mockResolvedValueOnce(vi.fn(async () => "Ship it on Thursday."));
-  voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
-    await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
-    return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
-  });
+  voice.recordAudio.mockImplementationOnce(
+    async (_cancel: AbortSignal, until: AbortSignal, options?: { onRecording?: () => void }) => {
+      options?.onRecording?.();
+      await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
+      return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
+    },
+  );
   await act(async () => toggle());
   await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
   expect(voice.recordAudio.mock.calls[0]?.[2]).toMatchObject({ onDevice: true });
@@ -287,5 +296,23 @@ it("shows preparing until a fallback's microphone opens, then listening", async 
   expect(container.textContent).toBe("preparing");
   await act(async () => plan.resolve({ kind: "provider", transcribe: true }));
   await vi.waitFor(() => expect(voice.recordClip).toHaveBeenCalled());
+  expect(container.textContent).toBe("listening");
+});
+
+it("starts the timer only once the recorder captures, after any permission prompt", async () => {
+  const permission = deferred<void>();
+  voice.appleTranscriber.mockResolvedValueOnce(vi.fn(async () => ""));
+  voice.recordAudio.mockImplementationOnce(
+    async (_cancel: AbortSignal, until: AbortSignal, options?: { onRecording?: () => void }) => {
+      await permission.promise;
+      options?.onRecording?.();
+      await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
+      return null;
+    },
+  );
+  await act(async () => toggle());
+  await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
+  expect(container.textContent).toBe("preparing");
+  await act(async () => permission.resolve());
   expect(container.textContent).toBe("listening");
 });
