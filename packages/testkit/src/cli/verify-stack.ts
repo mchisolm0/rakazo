@@ -201,7 +201,7 @@ async function up() {
 async function serve(id: string) {
   const dir = path.join(REPORTS, id);
   // From the environment, not argv, so a server password stays out of process listings.
-  const serverUrl = process.env.VERIFY_PG_URL;
+  const requestedServer = process.env.VERIFY_PG_URL;
   const [webPort, apiPort, supervisorPort] = await Promise.all([
     freePort(),
     freePort(),
@@ -231,8 +231,8 @@ async function serve(id: string) {
   try {
     let migrationUrl: string;
     let runtimeLogin = RUNTIME_LOGIN;
-    if (serverUrl) {
-      assertLocalServer(serverUrl);
+    if (requestedServer) {
+      const serverUrl = localServer(requestedServer);
       const name = `rakazo_verify_${id.replace(/\W/g, "_").toLowerCase()}`;
       runtimeLogin = { user: name, password: RUNTIME_LOGIN.password };
       await query(serverUrl, `CREATE DATABASE "${name}"`);
@@ -340,10 +340,11 @@ async function serve(id: string) {
 
 /**
  * A `--pg` URL must reach a server on this machine over TCP. Query options such as `?host=` and
- * other schemes such as `socket:` can redirect the connection, so neither is accepted. The error
- * never repeats the URL, which can hold a password.
+ * other schemes such as `socket:` can redirect the connection, so neither is accepted. Returns the
+ * URL as parsed here, so the driver connects to what was checked. The error never repeats the URL,
+ * which can hold a password.
  */
-function assertLocalServer(url: string) {
+function localServer(url: string) {
   const refuse = () =>
     new Error("--pg must be a postgres:// URL on 127.0.0.1 or localhost, with no options");
   let parsed: URL;
@@ -359,6 +360,7 @@ function assertLocalServer(url: string) {
   ) {
     throw refuse();
   }
+  return parsed.href;
 }
 
 /** Stops `pid` and everything under it. pnpm and turbo give each server its own process group. */
