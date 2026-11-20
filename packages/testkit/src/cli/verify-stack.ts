@@ -90,11 +90,14 @@ function alive(pid: number | undefined) {
 
 /** Whether the run's supervisor is still running, checked by its command line, not only its PID. */
 function supervising(run: RunState) {
-  if (!alive(run.supervisorPid)) return false;
-  const command = execFileSync("ps", ["-o", "command=", "-p", String(run.supervisorPid)], {
-    encoding: "utf8",
-  });
-  return command.includes(`serve ${run.id}`);
+  try {
+    const command = execFileSync("ps", ["-o", "command=", "-p", String(run.supervisorPid)], {
+      encoding: "utf8",
+    });
+    return command.includes(`serve ${run.id}`);
+  } catch {
+    return false; // ps exits 1 when the PID is gone.
+  }
 }
 
 /** `--run <id>`, or the newest run whose supervisor is still alive. */
@@ -229,11 +232,7 @@ async function serve(id: string) {
     let migrationUrl: string;
     let runtimeLogin = RUNTIME_LOGIN;
     if (serverUrl) {
-      // Query options such as `?host=` can redirect the connection, so none are accepted.
-      const parsed = new URL(serverUrl);
-      if (parsed.search || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) {
-        throw new Error("--pg must be a Postgres URL on 127.0.0.1 or localhost, with no options");
-      }
+      assertLocalServer(serverUrl);
       const name = `rakazo_verify_${id.replace(/\W/g, "_").toLowerCase()}`;
       runtimeLogin = { user: name, password: RUNTIME_LOGIN.password };
       await query(serverUrl, `CREATE DATABASE "${name}"`);
@@ -337,6 +336,29 @@ async function serve(id: string) {
   // The database is gone, and its owner URL can hold a local server's admin password.
   await writeState({ ...state, ...outcome, migrationUrl: undefined });
   process.exit(0);
+}
+
+/**
+ * A `--pg` URL must reach a server on this machine over TCP. Query options such as `?host=` and
+ * other schemes such as `socket:` can redirect the connection, so neither is accepted. The error
+ * never repeats the URL, which can hold a password.
+ */
+function assertLocalServer(url: string) {
+  const refuse = () =>
+    new Error("--pg must be a postgres:// URL on 127.0.0.1 or localhost, with no options");
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw refuse();
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(parsed.protocol) ||
+    parsed.search ||
+    !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)
+  ) {
+    throw refuse();
+  }
 }
 
 /** Stops `pid` and everything under it. pnpm and turbo give each server its own process group. */
