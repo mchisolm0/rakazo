@@ -48,6 +48,11 @@ vi.mock("react-native", () => ({
   },
 }));
 
+vi.mock("react-native-reanimated", async () => {
+  const { useState } = await import("react");
+  return { useSharedValue: <T,>(initial: T) => useState(() => ({ value: initial }))[0] };
+});
+
 vi.mock("expo-audio", () => ({
   AudioModule: {
     requestRecordingPermissionsAsync: vi.fn(async () => ({ granted: true })),
@@ -240,34 +245,39 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   expect(dictation.listen).not.toHaveBeenCalled();
 });
 
-it("dictates on the phone without asking for live speech recognition", async () => {
+it("dictates on the phone at full quality even when a hosted voice reads replies", async () => {
   const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
   const dictation = await import("../voice/dictation");
-  voice.appleTranscriber.mockResolvedValueOnce(vi.fn(async () => ""));
+  // The default mocks: device voice off, a provider that transcribes.
+  voice.appleTranscriber.mockResolvedValueOnce(vi.fn(async () => "Ship it on Thursday."));
+  voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
+    await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
+    return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
+  });
   await act(async () => toggle());
-  await vi.waitFor(() => expect(resolveVoiceCallPlan).toHaveBeenCalled());
-  const deps = vi.mocked(resolveVoiceCallPlan).mock.calls[0]?.[0];
-  expect(await deps?.dictationAvailable()).toBe(true);
+  await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
+  expect(voice.recordAudio.mock.calls[0]?.[2]).toMatchObject({ onDevice: true });
+  await act(async () => toggle());
+  await vi.waitFor(() => expect(words).toEqual([{ text: "Ship it on Thursday.", final: true }]));
+  expect(resolveVoiceCallPlan).not.toHaveBeenCalled();
+  expect(voice.recordClip).not.toHaveBeenCalled();
   expect(dictation.available).not.toHaveBeenCalled();
 });
 
-it("drops a session cancelled while the model prepares without asking for speech", async () => {
+it("drops a session cancelled while the model prepares", async () => {
   const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
-  const dictation = await import("../voice/dictation");
   const prepared = deferred<null>();
   voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
     onPreparing();
     return prepared.promise;
   });
   await act(async () => toggle());
-  await vi.waitFor(() => expect(resolveVoiceCallPlan).toHaveBeenCalled());
-  const available = vi.mocked(resolveVoiceCallPlan).mock.calls[0]?.[0].dictationAvailable();
   await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
   await act(async () => app.blur?.());
   await act(async () => prepared.resolve(null));
-  expect(await available).toBe(false);
-  expect(dictation.available).not.toHaveBeenCalled();
   expect(container.textContent).toBe("idle");
+  expect(resolveVoiceCallPlan).not.toHaveBeenCalled();
+  expect(voice.recordAudio).not.toHaveBeenCalled();
 });
 
 it("cancels on a tap while the model prepares", async () => {

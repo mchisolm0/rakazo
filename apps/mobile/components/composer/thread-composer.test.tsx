@@ -220,9 +220,20 @@ vi.mock("../../lib/native/native", () => ({
 }));
 const dictation = vi.hoisted(() => ({
   status: "idle",
+  startedAt: null,
+  levels: { value: [] },
   toggle: vi.fn(),
   cancel: vi.fn(),
   onWords: (_text: string, _final?: boolean) => {},
+}));
+vi.mock("./dictation-bar", () => ({
+  DictationBar: (props: { onCancel: () => void; onFinish: () => void }) =>
+    createElement(
+      "div",
+      { "data-testid": "dictation-bar" },
+      createElement("button", { "aria-label": "Cancel dictation", onClick: props.onCancel }),
+      createElement("button", { "aria-label": "Finish dictation", onClick: props.onFinish }),
+    ),
 }));
 vi.mock("../../lib/composer/composer-dictation", () => ({
   useComposerDictation: (opts: { onWords: (text: string, final?: boolean) => void }) => {
@@ -1294,22 +1305,16 @@ describe("thread composer isolation", () => {
     return container.querySelector<HTMLButtonElement>('button[aria-label="Send"]')!;
   }
 
-  it("keeps Send disabled while a dictation is still recording", () => {
-    dictation.status = "listening";
+  it("shows the dictation bar in place of the box and Send while recording", () => {
     type("Please check");
-    const send = sendButton();
-    expect(send.disabled).toBe(true);
-    act(() => send.click());
-    expect(props.send).not.toHaveBeenCalled();
-  });
-
-  it("keeps Send disabled while dictating a message that is only an attachment", () => {
     dictation.status = "listening";
-    render({ attachmentIds: ["file-1"] });
-    const send = sendButton();
-    expect(send.disabled).toBe(true);
-    act(() => send.click());
-    expect(props.send).not.toHaveBeenCalled();
+    render();
+    expect(container.querySelector('[data-testid="dictation-bar"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Send"]')).toBeNull();
+    press("Finish dictation");
+    expect(dictation.toggle).toHaveBeenCalledOnce();
+    press("Cancel dictation");
+    expect(dictation.cancel).toHaveBeenCalledOnce();
   });
 
   it("adds a provider's transcript after text typed while it recorded", () => {
