@@ -185,8 +185,6 @@ function replyBlockText(block: MessageBlock): string {
       return block.name;
     case "app":
       return block.server;
-    case "buttons":
-      return block.buttons.map((button) => button.label).join(", ");
     case "tool_question":
       return block.question.source;
     case "import_setup":
@@ -198,6 +196,7 @@ function replyBlockText(block: MessageBlock): string {
     // A reply's quote reaches the model, and a post's words are an outside service's.
     case "delivery":
     case "post":
+    case "buttons":
       return "";
   }
 }

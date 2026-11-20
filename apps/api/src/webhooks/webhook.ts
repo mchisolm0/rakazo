@@ -31,10 +31,14 @@ export {
   type WebhookTarget,
 } from "./webhook-inbound.js";
 
-/** A post has text; other services send a `post` of their own, such as a CMS's. */
+/** A post has text and buttons only; other services send a `post` of their own, such as a CMS's. */
 function isPost(value: unknown): boolean {
   return (
-    typeof value === "object" && value !== null && "text" in value && typeof value.text === "string"
+    typeof value === "object" &&
+    value !== null &&
+    "text" in value &&
+    typeof value.text === "string" &&
+    Object.keys(value).every((key) => key === "text" || key === "buttons")
   );
 }
 

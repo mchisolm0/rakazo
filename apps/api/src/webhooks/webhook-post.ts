@@ -4,6 +4,7 @@ import { LinkButton, MAX_LINK_BUTTONS } from "@rakazo/contracts";
 import {
   appendEventInTransaction,
   createThreadMessageInTransaction,
+  loadSpaceContentKeys,
   THREAD_LOCK_TRANSACTION_OPTIONS,
 } from "@rakazo/db";
 import { bestEffort } from "@rakazo/logging";
@@ -37,6 +38,8 @@ export async function postWebhookMessage(
     { kind: "post", markdown: post.text },
     ...(post.buttons?.length ? [{ kind: "buttons" as const, buttons: post.buttons }] : []),
   ];
+  // Keys load before the thread lock is taken, as a send's do.
+  await loadSpaceContentKeys(deps.prisma, spaceId);
   const committed = await deps.prisma.$transaction(async (tx) => {
     const message = await createThreadMessageInTransaction(tx, {
       threadId,

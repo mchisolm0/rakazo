@@ -464,7 +464,7 @@ describe("inbound webhook HTTP route", () => {
     const res = await mount(deps).request("/api/v1/bots/bot-1/webhook", {
       method: "POST",
       headers: { authorization: `Bearer ${SECRET}`, "content-type": "application/json" },
-      body: JSON.stringify({ post: { current: { title: "Hello" }, previous: {} } }),
+      body: JSON.stringify({ post: { id: "post-1", text: "Hello", current: {} } }),
     });
     expect(res.status).toBe(200);
     expect(deps.sendUserMessage).toHaveBeenCalledTimes(1);
