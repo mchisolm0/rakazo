@@ -34,6 +34,7 @@ export async function postWebhookMessage(
   const { spaceId, id: botId } = target.bot;
   const { threadId } = target;
   const blocks: MessageBlock[] = [
+    { kind: "webhook_post" },
     { kind: "text", text: post.text },
     ...(post.buttons?.length ? [{ kind: "buttons" as const, buttons: post.buttons }] : []),
   ];

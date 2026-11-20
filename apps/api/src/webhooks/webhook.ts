@@ -31,6 +31,13 @@ export {
   type WebhookTarget,
 } from "./webhook-inbound.js";
 
+/** A post has text; other services send a `post` of their own, such as a CMS's. */
+function isPost(value: unknown): boolean {
+  return (
+    typeof value === "object" && value !== null && "text" in value && typeof value.text === "string"
+  );
+}
+
 export function mountWebhookHttpRoutes(app: Hono, deps: WebhookDeps) {
   const secretCache: WebhookSecretCache = new Map();
   const postSchema = webhookPostSchema(deps.linkSchemes);
@@ -60,7 +67,7 @@ export function mountWebhookHttpRoutes(app: Hono, deps: WebhookDeps) {
     }
 
     const payload = parseWebhookPayload(raw, c.req.header("content-type"));
-    if ("post" in payload) {
+    if (isPost(payload.post)) {
       const post = postSchema.safeParse(payload.post);
       if (!post.success) return c.json({ error: "Invalid post" }, 400);
       return c.json(await postWebhookMessage(deps, target, post.data));

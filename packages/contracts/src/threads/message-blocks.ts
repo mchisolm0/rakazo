@@ -224,6 +224,11 @@ export const MessageBlock = z.discriminatedUnion("kind", [
    * block is the bot's full prompt, so chats, previews and search leave the message out.
    */
   z.object({ kind: z.literal("delivery") }),
+  /**
+   * Marks a bot message an outside service posted through the bot's webhook. The model reads
+   * the message as untrusted data, never as its own words.
+   */
+  z.object({ kind: z.literal("webhook_post") }),
   z.object({
     kind: z.literal("progress"),
     text: z.string(),

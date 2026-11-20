@@ -459,6 +459,17 @@ describe("inbound webhook HTTP route", () => {
     );
   });
 
+  it("delivers another service's own `post` payload to routines", async () => {
+    const deps = createDeps({ routines: [WEBHOOK_ROUTINE] });
+    const res = await mount(deps).request("/api/v1/bots/bot-1/webhook", {
+      method: "POST",
+      headers: { authorization: `Bearer ${SECRET}`, "content-type": "application/json" },
+      body: JSON.stringify({ post: { current: { title: "Hello" }, previous: {} } }),
+    });
+    expect(res.status).toBe(200);
+    expect(deps.sendUserMessage).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ["a button URL with another scheme", [{ label: "Run", url: "javascript:alert(1)" }]],
     ["more than four buttons", Array(5).fill({ label: "Open", url: "https://example.test" })],

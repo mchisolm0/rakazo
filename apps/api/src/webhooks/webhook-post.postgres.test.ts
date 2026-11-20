@@ -84,6 +84,7 @@ describePostgres("webhook post (PostgreSQL)", () => {
     expect(message).toMatchObject({ threadId: bot.thread!.id, role: "bot", botId: bot.id });
     expect(message.runId).toBeNull();
     expect(readMessageBlocks(message).blocks).toEqual([
+      { kind: "webhook_post" },
       { kind: "text", text: "Build **finished**" },
       { kind: "buttons", buttons },
     ]);
