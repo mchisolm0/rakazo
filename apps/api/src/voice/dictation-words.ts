@@ -80,7 +80,11 @@ export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<stri
       .map((name) => name.trim())
       .filter(Boolean);
     // A repository a bot or person shares a name with takes their spelling ("PlatoChat").
-    const spelling = new Map(named.map((name) => [name.toLowerCase(), name]));
+    const spelling = new Map<string, string>();
+    // Bots come before members, so a bot keeps its spelling over a member of the same name.
+    for (const name of named) {
+      if (!spelling.has(name.toLowerCase())) spelling.set(name.toLowerCase(), name);
+    }
     const words = new Map<string, string>();
     // Repositories come first, so a Space's member list cannot crowd them out.
     for (const word of [
