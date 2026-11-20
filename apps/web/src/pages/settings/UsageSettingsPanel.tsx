@@ -5,6 +5,7 @@ import type {
   UsageDateRange,
   UsageTotalField,
 } from "@rakazo/contracts";
+import { floorCents } from "@rakazo/core";
 import {
   Field,
   FieldLabel,
@@ -28,12 +29,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { RefObject } from "react";
 import { useEffect, useState } from "react";
 import { useSpaceQueries } from "../../lib/query/query";
-
-/**
- * Rounds down to the cent. toFixed(9) first drops only float noise, so 0.29 * 100 = 28.999…96
- * reads 29 cents while a real 0.289999999 still reads 28.
- */
-const floorCents = (usd: number) => Math.floor(Number((usd * 100).toFixed(9))) / 100;
 
 type Totals = Pick<UsageBreakdownModel, UsageTotalField | "incomplete">;
 

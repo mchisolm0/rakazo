@@ -2,7 +2,7 @@ import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import type { PlanLimits, UsageSummary, UsageTotalField } from "@rakazo/contracts";
 import { hasLab, modelCreditsUsd } from "@rakazo/contracts";
-import { accountDisplay, formatTimeUntil } from "@rakazo/core";
+import { accountDisplay, floorCents, formatTimeUntil } from "@rakazo/core";
 import type { Href } from "expo-router";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import type { ComponentProps } from "react";
@@ -153,7 +153,7 @@ export default function Account() {
       ? undefined
       : // A floor rounds down, so it never claims more than the calls that report a cost.
         incomplete?.includes("costUsd")
-        ? `${usd.format(Math.floor(Number((costUsd * 100).toFixed(9))) / 100)}+`
+        ? `${usd.format(floorCents(costUsd))}+`
         : costUsd > 0 && costUsd < 0.01
           ? `<${usd.format(0.01)}`
           : usd.format(costUsd);

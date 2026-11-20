@@ -235,7 +235,7 @@ it("marks totals that leave out calls without a count as a floor", async () => {
       const usage = usageFor(input);
       return {
         ...usage,
-        totals: { ...usage.totals, costUsd: 0.289999999, incomplete: ["costUsd"] },
+        totals: { ...usage.totals, costUsd: 0.289999999999, incomplete: ["costUsd"] },
       };
     });
     await panel.pick("7 days");
