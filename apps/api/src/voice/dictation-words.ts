@@ -57,7 +57,7 @@ export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<stri
       select: { spaceId: true },
     });
     const spaceIds = memberships.map((membership) => membership.spaceId);
-    const [bots, members, threads] = await Promise.all([
+    const [bots, members, messages] = await Promise.all([
       prisma.bot.findMany({
         where: { spaceId: { in: spaceIds }, userId: actor.userId, archivedAt: null },
         select: { name: true },
@@ -66,25 +66,22 @@ export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<stri
         where: { spaceId: { in: spaceIds } },
         select: { member: { select: { user: { select: { name: true } } } } },
       }),
-      prisma.thread.findMany({
-        where: { spaceId: { in: spaceIds }, userId: actor.userId },
-        select: { id: true },
-      }),
+      newestMessagesOfActiveThreads(
+        prisma,
+        { userId: actor.userId, spaceIds },
+        RECENT_THREADS,
+        MESSAGES_PER_THREAD,
+      ),
     ]);
-    const messages = await newestMessagesOfActiveThreads(
-      prisma,
-      threads.map((thread) => thread.id),
-      RECENT_THREADS,
-      MESSAGES_PER_THREAD,
-    );
     const texts = messages.flatMap((message) =>
       storedMessageBlocks(message).flatMap((block) => (block.kind === "text" ? [block.text] : [])),
     );
     const words = new Map<string, string>();
     for (const word of [
+      // Names a Space's member list cannot crowd out come first.
+      ...repositoryNames(texts),
       ...bots.map((bot) => bot.name),
       ...members.map((row) => row.member.user.name),
-      ...repositoryNames(texts),
     ]) {
       const trimmed = word.trim();
       const key = trimmed.toLowerCase();

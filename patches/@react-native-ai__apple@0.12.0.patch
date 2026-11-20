@@ -1,8 +1,8 @@
 diff --git a/ios/transcription/AppleTranscription.mm b/ios/transcription/AppleTranscription.mm
-index c0f036ce7d9905cf7a54c80199e4d6039f64ef30..ea22c1cb3b8cdfdbed5af478a4165d43b583a766 100644
+index c0f036ce7d9905cf7a54c80199e4d6039f64ef30..54d1d3680463080045f82304d5425df82d3563a4 100644
 --- a/ios/transcription/AppleTranscription.mm
 +++ b/ios/transcription/AppleTranscription.mm
-@@ -66,6 +66,18 @@ - (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime &)rt callInvoker:(
+@@ -66,6 +66,19 @@ - (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime &)rt callInvoker:(
          
          auto languageStr = args[1].asString(rt).utf8(rt);
          NSString *language = [NSString stringWithUTF8String:languageStr.c_str()];
@@ -14,14 +14,15 @@ index c0f036ce7d9905cf7a54c80199e4d6039f64ef30..ea22c1cb3b8cdfdbed5af478a4165d43
 +          for (size_t i = 0; i < list.size(rt); i++) {
 +            auto item = list.getValueAtIndex(rt, i);
 +            if (item.isString()) {
-+              [words addObject:[NSString stringWithUTF8String:item.asString(rt).utf8(rt).c_str()]];
++              NSString *word = [NSString stringWithUTF8String:item.asString(rt).utf8(rt).c_str()];
++              if (word) [words addObject:word];
 +            }
 +          }
 +        }
          
          auto Promise = rt.global().getPropertyAsFunction(rt, "Promise");
          
-@@ -73,14 +85,14 @@ - (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime &)rt callInvoker:(
+@@ -73,14 +86,14 @@ - (void)installJSIBindingsWithRuntime:(facebook::jsi::Runtime &)rt callInvoker:(
            rt,
            jsi::PropNameID::forAscii(rt, "executor"),
            2,
@@ -39,7 +40,7 @@ index c0f036ce7d9905cf7a54c80199e4d6039f64ef30..ea22c1cb3b8cdfdbed5af478a4165d43
                  auto jsResult = react::TurboModuleConvertUtils::convertObjCObjectToJSIValue(rt, result);
                  resolveFunc.call(rt, jsResult);
 diff --git a/ios/transcription/AppleTranscriptionImpl.swift b/ios/transcription/AppleTranscriptionImpl.swift
-index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968ccced23b8 100644
+index 188371a5f55fadae19187108c4a688569d0223e3..2b205a6cb58f89f66231d0a0dd0d08475b671870 100644
 --- a/ios/transcription/AppleTranscriptionImpl.swift
 +++ b/ios/transcription/AppleTranscriptionImpl.swift
 @@ -12,6 +12,11 @@ import UniformTypeIdentifiers
@@ -54,22 +55,27 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
    
    @available(iOS 26, *)
    private func createTranscriber(for locale: Locale) -> SpeechTranscriber {
-@@ -24,6 +29,33 @@ public class AppleTranscriptionImpl: NSObject {
+@@ -24,6 +29,35 @@ public class AppleTranscriptionImpl: NSObject {
        attributeOptions: preset.attributeOptions
      )
    }
-+  /// The short-form model that honors taught words. Nil where the locale lacks it or its model
-+  /// is not on the phone yet, so a transcription never waits on a download for it.
++  /// The short-form model that honors taught words, or nil where the locale lacks it.
 +  @available(iOS 26, *)
-+  private func installedDictation(for locale: Locale) async -> DictationTranscriber? {
++  private func dictationTranscriber(for locale: Locale) async -> DictationTranscriber? {
 +    guard let supported = await DictationTranscriber.supportedLocale(equivalentTo: locale) else { return nil }
-+    let dictation = DictationTranscriber(
++    return DictationTranscriber(
 +      locale: supported,
 +      contentHints: [],
 +      transcriptionOptions: [.punctuation],
 +      reportingOptions: [],
 +      attributeOptions: [.audioTimeRange]
 +    )
++  }
++
++  /// The short-form model, only once it is on the phone, so a transcription never waits on it.
++  @available(iOS 26, *)
++  private func installedDictation(for locale: Locale) async -> DictationTranscriber? {
++    guard let dictation = await dictationTranscriber(for: locale) else { return nil }
 +    return await AssetInventory.status(forModules: [dictation]) == .installed ? dictation : nil
 +  }
 +
@@ -77,10 +83,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
 +  @available(iOS 26, *)
 +  private func installDictation(for locale: Locale) {
 +    Task.detached {
-+      guard let supported = await DictationTranscriber.supportedLocale(equivalentTo: locale) else { return }
-+      let dictation = DictationTranscriber(
-+        locale: supported, contentHints: [], transcriptionOptions: [], reportingOptions: [], attributeOptions: []
-+      )
++      guard let dictation = await self.dictationTranscriber(for: locale) else { return }
 +      try? await AssetInventory.assetInstallationRequest(supporting: [dictation])?.downloadAndInstall()
 +    }
 +  }
@@ -88,7 +91,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
    @objc
    public func isAvailable(_ language: String) -> Bool {
      if #available(iOS 26, *) {
-@@ -41,26 +73,25 @@ public class AppleTranscriptionImpl: NSObject {
+@@ -41,7 +75,7 @@ public class AppleTranscriptionImpl: NSObject {
            let locale = Locale(identifier: language)
            
            guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
@@ -97,14 +100,12 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
              return
            }
            
-           let transcriber = createTranscriber(for: supportedLocale)
-+          installDictation(for: supportedLocale)
-           
-           let status = await AssetInventory.status(forModules: [transcriber])
+@@ -51,16 +85,17 @@ public class AppleTranscriptionImpl: NSObject {
            
            switch status {
            case .installed:
 -            resolve(nil)
++            installDictation(for: supportedLocale)
 +            resolve(supportedLocale.identifier)
            case .supported, .downloading:
 -            if let request = try? await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
@@ -114,6 +115,8 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
 -            } else {
 -              resolve(nil)
              }
++            // Only after the model this dictation waits on, so the two never share the download.
++            installDictation(for: supportedLocale)
 +            resolve(supportedLocale.identifier)
            case .unsupported:
 -            reject("AppleTranscription", "Assets not supported for locale: \(supportedLocale.identifier)", nil)
@@ -121,7 +124,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
            @unknown default:
              reject ("AppleTranscription", "Unknown asset inventory status", nil)
            }
-@@ -74,7 +105,7 @@ public class AppleTranscriptionImpl: NSObject {
+@@ -74,7 +109,7 @@ public class AppleTranscriptionImpl: NSObject {
    }
  
    @objc
@@ -130,7 +133,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
      if #available(iOS 26, *) {
        let tempDirectory = FileManager.default.temporaryDirectory
        let fileName = UUID().uuidString
-@@ -83,62 +114,142 @@ public class AppleTranscriptionImpl: NSObject {
+@@ -83,62 +118,144 @@ public class AppleTranscriptionImpl: NSObject {
        do {
          try audioData.write(to: fileURL)
          
@@ -171,14 +174,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
 -                  segments.append(segment)
 -                }
 -              }
-+            let result: [String: Any]
-+            do {
-+              result = try await analyze(fileURL, language: language, words: words)
-+            } catch where !words.isEmpty {
-+              // Taught words only refine the transcript; if the pass with them fails, transcribe
-+              // as before rather than lose the recording.
-+              result = try await analyze(fileURL, language: language, words: [])
-             }
+-            }
 -            
 -            let lastSampleTime = try await analyzer.analyzeSequence(from: audioFile)
 -            
@@ -186,7 +182,16 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
 -              try await analyzer.finalizeAndFinish(through: lastSampleTime)
 -            } else {
 -              await analyzer.cancelAndFinishNow()
--            }
++            let locale = Locale(identifier: language)
++            let dictation = words.isEmpty ? nil : await installedDictation(for: locale)
++            let result: [String: Any]
++            do {
++              result = try await analyze(fileURL, locale: locale, dictation: dictation, words: words)
++            } catch where dictation != nil {
++              // Taught words only refine the transcript; if the pass with them fails, transcribe
++              // as before rather than lose the recording.
++              result = try await analyze(fileURL, locale: locale, dictation: nil, words: [])
+             }
 -            
 -            let totalDuration = if let lastSampleTime { CMTimeGetSeconds(lastSampleTime) } else { 0.0 }
 -            
@@ -210,13 +215,13 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
    }
 -}
  
-+  /// One SpeechAnalyzer pass over the recording. With `words`, the dictation model listens for
-+  /// them alongside the long-form one, and `TaughtWords` swaps them into the long-form text.
++  /// One SpeechAnalyzer pass over the recording. With `dictation`, that model listens for `words`
++  /// alongside the long-form one, and `TaughtWords` swaps them into the long-form text.
 +  @available(iOS 26, *)
-+  private func analyze(_ fileURL: URL, language: String, words: [String]) async throws -> [String: Any] {
-+    let locale = Locale(identifier: language)
++  private func analyze(
++    _ fileURL: URL, locale: Locale, dictation: DictationTranscriber?, words: [String]
++  ) async throws -> [String: Any] {
 +    let transcriber = createTranscriber(for: locale)
-+    let dictation = words.isEmpty ? nil : await installedDictation(for: locale)
 +    let modules: [any SpeechModule] = [transcriber] + (dictation.map { [$0] } ?? [])
 +    let analyzer = SpeechAnalyzer(modules: modules)
 +    if dictation != nil {

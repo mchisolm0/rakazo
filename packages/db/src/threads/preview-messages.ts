@@ -60,22 +60,25 @@ export async function withNewestThreadMessages<T extends { thread: { id: string 
 }
 
 /**
- * The newest `perThread` messages of the `threadCount` threads written to most recently, in two
- * indexed reads, so neither a long history nor many quiet threads makes the read slow.
+ * The newest `perThread` messages of a member's own chats in `spaceIds` that were written to most
+ * recently, skipping background helper threads, in two indexed reads.
  */
 export async function newestMessagesOfActiveThreads(
   prisma: PrismaClient,
-  threadIds: string[],
+  owner: { userId: string; spaceIds: string[] },
   threadCount: number,
   perThread: number,
 ): Promise<SidebarPreviewMessage[]> {
-  if (threadIds.length === 0) return [];
+  if (owner.spaceIds.length === 0) return [];
   const active = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
     SELECT t.id
-    FROM unnest(${threadIds}::text[]) AS t(id)
+    FROM threads t
     CROSS JOIN LATERAL (
       SELECT "createdAt" FROM messages WHERE "threadId" = t.id ORDER BY seq DESC LIMIT 1
     ) m
+    WHERE t."spaceId" = ANY(${owner.spaceIds}::text[])
+      AND t."userId" = ${owner.userId}
+      AND t."helperBotId" IS NULL
     ORDER BY m."createdAt" DESC
     LIMIT ${threadCount}
   `);
