@@ -54,8 +54,8 @@ export async function postWebhookMessage(
     return { messageId: message.id, seq: event.seq };
   }, THREAD_LOCK_TRANSACTION_OPTIONS);
   await bestEffort("webhook post notify", deps.events.notify(threadId, committed.seq));
-  // Awaited, so a deploy draining requests does not drop the push.
-  await bestEffort(
+  // Not awaited, as for a member's message: the sender's answer does not wait on push retries.
+  void bestEffort(
     "webhook post notification",
     notifyBotPost(deps, { spaceId, botId, threadId, text: post.text }),
   );
