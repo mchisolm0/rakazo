@@ -53,5 +53,7 @@ export const ThreadSnapshotSchema = z.object({
   run: RunSchema.nullable(),
   activeRuns: z.array(RunSchema).optional(),
   computer: ComputerStatusSchema.optional(),
+  /** A topic's snapshot carries the message it replies to, which lives in the bot's chat. */
+  topicRoot: ThreadMessageSchema.optional(),
 });
 export type ThreadSnapshot = z.infer<typeof ThreadSnapshotSchema>;

@@ -43,6 +43,7 @@ import {
   voiceCallInstruction,
 } from "./run-instructions.prompt.js";
 import { loadSharedSpaceNote } from "./shared-space-note.js";
+import { loadTopicActivityContext, loadTopicRootContext } from "./topic-context.js";
 
 export async function createRunContext(
   services: RunExecutorServices,
@@ -369,6 +370,20 @@ export async function buildTurnPrompt(
   const sharedSpaceNote = people
     ? await loadSharedSpaceNote(deps.prisma, run.spaceId, run.userId)
     : undefined;
+  const readsHistory = parts.records.historyReach !== "none";
+  // Per turn, after the history: the chat hears what moved in its threads without their replies.
+  const topicActivity =
+    readsHistory && thread.botId
+      ? await bestEffort(
+          "summarize thread activity for the chat",
+          loadTopicActivityContext(deps.prisma, {
+            mainThreadId: thread.id,
+            userId: run.userId,
+            since: previousMessageAt(historyMessages, currentTurnMessage?.id),
+          }),
+        )
+      : undefined;
+  const topicRoot = readsHistory ? await loadTopicRootContext(deps.prisma, thread) : undefined;
   const prompt = [
     replyContext,
     routineNote,
@@ -386,10 +401,14 @@ export async function buildTurnPrompt(
     )}\n</current_time>`,
     lateRoutineNote,
     sharedSpaceNote,
+    topicActivity,
   ]
     .filter(Boolean)
     .join("\n\n");
   const historicalContext: AgentRunRequest["history"] = [];
+  if (topicRoot) {
+    historicalContext.push({ role: "user", content: redactSecrets(topicRoot, runSecrets) });
+  }
   if (compactedHistory.usedLocalSummary && compactedHistory.summary) {
     historicalContext.push({
       role: "user",
