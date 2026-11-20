@@ -31,11 +31,10 @@ describePostgres("dictation words (PostgreSQL)", () => {
     await db.pool.end();
   });
 
-  async function person(label: string) {
+  async function person(label: string, name = `${label} Person`) {
     // Randomness first: a Space's slug comes from the start of its owner's id.
     const userId = `${randomBytes(5).toString("hex")}-dictation-${label}-${suffix}`;
     users.push(userId);
-    const name = `${label} Person`;
     await system.user.create({
       data: { id: userId, name, email: `${userId}@rakazo.test`, emailVerified: false },
     });
@@ -53,7 +52,8 @@ describePostgres("dictation words (PostgreSQL)", () => {
   }
 
   it("lists only the actor's own bots, people in their Spaces, and links from their own chats", async () => {
-    const me = await person("Me");
+    // The actor's own name is spelled like a bot's in lower case; the bot's spelling must win.
+    const me = await person("Me", "platochat");
     const other = await person("Other");
     await botChat(me.spaceId, me.userId, "Ada", "Merged https://example.com/me/rakazo/pull/1");
     await botChat(
@@ -71,8 +71,9 @@ describePostgres("dictation words (PostgreSQL)", () => {
       spaceId: me.spaceId,
     } as Actor);
 
-    // The repository takes its bot's spelling; another person's names and links stay out.
-    expect(words).toHaveLength(4);
-    expect(words).toEqual(expect.arrayContaining(["rakazo", "PlatoChat", "Ada", me.name]));
+    // The repository and the member take the bot's spelling; another person's names and links
+    // stay out.
+    expect(words).toHaveLength(3);
+    expect(words).toEqual(expect.arrayContaining(["rakazo", "PlatoChat", "Ada"]));
   });
 });
