@@ -118,6 +118,7 @@ import { useSnoozeClock } from "./shell/sidebar/use-snooze-clock";
 import { useRosterDrop, useSpaceBootstrap, useSpaceRoster } from "./shell/sidebar/use-space-roster";
 import { markShellReady, useSpaceEpoch } from "./shell/space-switch";
 import { TimezonePrompt } from "./shell/timezone-prompt";
+import { useBotTopics } from "./shell/topics/use-bot-topics";
 import { useBrowserNotifications } from "./shell/use-browser-notifications";
 import { usePaletteActions } from "./shell/use-palette-actions";
 import { useReportedUiLocale } from "./shell/use-reported-ui-locale";
@@ -638,6 +639,24 @@ function SpaceShell() {
     () => (inGroup ? { groupId: groupId ?? "" } : { botId: active?.id ?? "" }),
     [active?.id, groupId, inGroup],
   );
+  const topicBotId = inGroup ? undefined : active?.id;
+  const topics = useBotTopics({ queries, botId: topicBotId, openTopic: rightPanel.openTopic });
+  const openTopicPanel = useCallback(
+    (topicId: string) => {
+      if (topicBotId) rightPanel.openTopic(topicBotId, topicId);
+    },
+    [topicBotId, rightPanel.openTopic],
+  );
+  const transcriptTopics = useMemo(
+    () =>
+      active && !inGroup
+        ? {
+            byMessage: topics.byMessage,
+            bot: { id: active.id, color: active.color, avatarSet: active.avatarSet },
+          }
+        : undefined,
+    [topics.byMessage, active?.id, active?.color, active?.avatarSet, inGroup],
+  );
   const transcriptMembers = activeSnapshot?.members ?? activeGroup?.members;
   const resolveTranscriptBot = useCallback(
     (botId: string) => {
@@ -1147,6 +1166,14 @@ function SpaceShell() {
             voiceReady={Boolean(voiceStatus?.ready)}
             inCall={Boolean(active) && call?.botId === active?.id}
             panelOpen={chatPanelOpen}
+            threads={
+              topicBotId && topics.topics.length
+                ? {
+                    unread: topics.unreadOpen,
+                    onOpen: () => setPanel(panel === "threads" ? null : "threads"),
+                  }
+                : undefined
+            }
             onOpenNavigation={() => setMobileSidebarOpen(true)}
             onTogglePanel={toggleChatPanel}
             onCall={(bot) => {
@@ -1194,6 +1221,9 @@ function SpaceShell() {
               onOpenBot={openBot}
               onAnswer={composer.answerMessage}
               onReply={replyToMessage}
+              onReplyInThread={topicBotId ? topics.replyInThread : undefined}
+              topics={transcriptTopics}
+              onOpenTopic={openTopicPanel}
               onMarkUnread={markMessageUnread}
               onQuote={quoteMessage}
               onQuoteShortcutChange={registerQuoteShortcut}
@@ -1313,6 +1343,30 @@ function SpaceShell() {
 
       <ShellSidePanel
         rpc={rpc}
+        threads={
+          topicBotId
+            ? {
+                queries,
+                topics: topics.topics,
+                topicId:
+                  rightPanel.topic?.botId === topicBotId ? rightPanel.topic.topicId : undefined,
+                onOpen: openTopicPanel,
+                meId: userId,
+                showToolActivity,
+                enterToSend,
+                messageContext: {
+                  onOpenBot: openBot,
+                  onOpenPeerMessages: openPeerMessages,
+                  peerBot: resolveTranscriptBot,
+                  onBotChanged: refreshBots,
+                  onAddRoutine: addSkillRoutine,
+                  onOpenComputer: computerControls.onOpenComputer,
+                  onReleaseComputer: computerControls.onReleaseComputer,
+                  onOpenImportSetup: openImportSetup,
+                },
+              }
+            : undefined
+        }
         panel={panel}
         setPanel={setPanel}
         active={active}

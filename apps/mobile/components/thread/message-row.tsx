@@ -5,6 +5,7 @@ import type {
   LoginFieldInput,
   MessageBlock,
   MessageReaction,
+  TopicSummary,
 } from "@rakazo/contracts";
 import { canReactToThreadMessage, MESSAGE_REACTIONS } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
@@ -44,6 +45,7 @@ import type { MessageActionProps } from "./message-bubble";
 import { MessageBubble } from "./message-bubble";
 import { ReplyLine } from "./reply-line";
 import { TimeSeparator } from "./time-separator";
+import { TopicFooter } from "./topic-footer";
 import { UnreadDivider } from "./unread-divider";
 
 export type MessageRowActions = {
@@ -53,6 +55,8 @@ export type MessageRowActions = {
     opening: boolean,
   ) => void;
   reply: (message: MobileMessage) => void;
+  /** Opens the message's topic, starting it on first use. */
+  openTopic: (message: MobileMessage) => void;
   quote: (message: MobileMessage) => void;
   select: (text: string) => void;
   speak: (message: MobileMessage) => void;
@@ -113,6 +117,10 @@ type MessageRowProps = {
   columnWidth: number;
   enableJump: boolean;
   index: number;
+  /** The message's topic, once it has one. */
+  topic?: TopicSummary;
+  /** A one-to-one bot chat offers Reply in Thread on its messages. */
+  canOpenTopic: boolean;
 };
 
 export const MessageRow = memo(function MessageRow({
@@ -151,6 +159,8 @@ export const MessageRow = memo(function MessageRow({
   columnWidth,
   enableJump,
   index,
+  topic,
+  canOpenTopic,
 }: MessageRowProps) {
   const tokens = useMobileTokens();
   const colorScheme = useResolvedAppearance();
@@ -199,6 +209,8 @@ export const MessageRow = memo(function MessageRow({
     // Any sent message can be marked unread; the next open starts New at the first reply from it.
     const includeUnread = !readOnly && !markedUnread && canMarkMessageUnread(message);
     const reply = () => actions.reply(message);
+    const includeThread = canOpenTopic && !readOnly && !message.id.startsWith("progress:");
+    const openTopic = () => actions.openTopic(message);
     const quote = () => actions.quote(message);
     const speakMessage = () => actions.speak(message);
     const select = () =>
@@ -218,6 +230,7 @@ export const MessageRow = memo(function MessageRow({
     };
     const menuActions = [
       ...(!readOnly ? [{ name: "reply", text: t`Reply`, onPress: reply }] : []),
+      ...(includeThread ? [{ name: "thread", text: t`Reply in Thread`, onPress: openTopic }] : []),
       ...(includeUnread ? [{ name: "unread", text: t`Mark as unread`, onPress: markUnread }] : []),
       ...(includeQuote ? [{ name: "quote", text: t`Quote`, onPress: quote }] : []),
       ...(includeReact
@@ -248,6 +261,7 @@ export const MessageRow = memo(function MessageRow({
     const menu = buildMessageContextMenu({
       labels: {
         reply: t`Reply`,
+        thread: t`Reply in Thread`,
         copy: t`Copy`,
         react: t`React`,
         quote: t`Quote`,
@@ -258,6 +272,7 @@ export const MessageRow = memo(function MessageRow({
       reactions: MESSAGE_REACTIONS,
       include: {
         reply: !readOnly,
+        thread: includeThread,
         quote: includeQuote,
         react: includeReact,
         speak: includeSpeak,
@@ -280,6 +295,16 @@ export const MessageRow = memo(function MessageRow({
                     text: t`Reply`,
                     icon: "arrow-undo-outline" as const,
                     onPress: reply,
+                  },
+                ]
+              : []),
+            ...(includeThread
+              ? [
+                  {
+                    name: "thread",
+                    text: t`Reply in Thread`,
+                    icon: "chatbubbles-outline" as const,
+                    onPress: openTopic,
                   },
                 ]
               : []),
@@ -352,6 +377,7 @@ export const MessageRow = memo(function MessageRow({
           return;
         }
         if (id === "reply") reply();
+        if (id === "thread") openTopic();
         if (id === "copy") copy();
         if (id === "quote") quote();
         if (id === "speak") speakMessage();
@@ -374,6 +400,7 @@ export const MessageRow = memo(function MessageRow({
     actions,
     markedUnread,
     readOnly,
+    canOpenTopic,
     onCall,
     colorScheme,
     t,
@@ -507,6 +534,9 @@ export const MessageRow = memo(function MessageRow({
                 </Animated.Text>
               ))}
             </View>
+          ) : null}
+          {topic && topic.replyCount > 0 ? (
+            <TopicFooter topic={topic} onPress={() => actions.openTopic(message)} />
           ) : null}
         </View>
       </View>
