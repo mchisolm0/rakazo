@@ -1,8 +1,6 @@
 // The seeded account creates Spaces from the create menu and the command menu, each with its own
 // Chief, and renames one from its settings.
-import type { Drive } from "../../../../packages/testkit/src/cli/verify-stack.ts";
-
-export default async function ({ page, expect, capture, signIn }: Drive) {
+export default async function ({ page, expect, capture, signIn }) {
   await signIn();
   await expect(page.getByPlaceholder(/^Message /)).toBeVisible({ timeout: 30_000 });
   const stamp = Date.now() % 100_000;

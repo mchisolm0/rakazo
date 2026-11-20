@@ -1,7 +1,5 @@
 // The seeded account creates a bot from the create menu and from the command menu.
-import type { Drive } from "../../../../packages/testkit/src/cli/verify-stack.ts";
-
-export default async function ({ page, expect, capture, signIn }: Drive) {
+export default async function ({ page, expect, capture, signIn }) {
   await signIn();
   await expect(page.getByPlaceholder(/^Message /)).toBeVisible({ timeout: 30_000 });
   const stamp = Date.now() % 100_000;

@@ -46,12 +46,10 @@ Without `--run`, commands use the newest run whose supervisor is alive.
 pnpm verify:stack drive .agents/skills/verify-rakazo/drives/chat.ts [--run <id>] [--headed]
 ```
 
-A drive script default-exports one async function that receives a `Drive` (typed in `verify-stack.ts`):
+A drive script default-exports one async function that receives a `Drive` (the type is in `verify-stack.ts`; skill files may not import testkit, so scripts leave it implicit):
 
 ```ts
-import type { Drive } from "../../../../packages/testkit/src/cli/verify-stack.ts";
-
-export default async function ({ page, expect, capture, signIn }: Drive) {
+export default async function ({ page, expect, capture, signIn }) {
   await signIn(); // the seeded account, then /app
   await page.getByPlaceholder("Message Chief").fill("hello");
   await page.keyboard.press("Enter");

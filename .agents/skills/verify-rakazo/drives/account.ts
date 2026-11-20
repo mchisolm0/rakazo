@@ -1,7 +1,5 @@
 // A new person signs up through the form, lands in Chief, logs out, and signs back in.
-import type { Drive } from "../../../../packages/testkit/src/cli/verify-stack.ts";
-
-export default async function ({ page, expect, capture, signUp }: Drive) {
+export default async function ({ page, expect, capture, signUp }) {
   const { email, password } = await signUp();
   await page.waitForURL(/\/(onboarding|app)/);
   const integrations = page.getByRole("heading", { name: "Server integrations", exact: true });

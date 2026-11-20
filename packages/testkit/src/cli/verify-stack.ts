@@ -20,7 +20,6 @@ import { pathToFileURL } from "node:url";
 import type { BrowserContext, expect, Page } from "@playwright/test";
 import { pollUntil } from "@rakazo/core";
 import { createPool } from "@rakazo/db";
-import { spawnPnpm } from "../../../../scripts/pnpm.mjs";
 import {
   argument,
   benchmarkEnvironment,
@@ -283,7 +282,7 @@ async function serve(id: string) {
       env[name] = "";
     }
     const devLog = openSync(path.join(dir, "dev.log"), "a");
-    const dev = spawnPnpm(["dev"], { cwd: root, env, stdio: ["ignore", devLog, devLog] });
+    const dev = spawn("pnpm", ["dev"], { cwd: root, env, stdio: ["ignore", devLog, devLog] });
     if (dev.pid) {
       const pid = dev.pid;
       releases.push(() => stopTree(pid));

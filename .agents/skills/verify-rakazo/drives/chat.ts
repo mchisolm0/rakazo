@@ -1,7 +1,5 @@
 // The seeded account sends Chief a message and sees the reply, which survives a reload.
-import type { Drive } from "../../../../packages/testkit/src/cli/verify-stack.ts";
-
-export default async function ({ page, expect, capture, signIn }: Drive) {
+export default async function ({ page, expect, capture, signIn }) {
   await signIn();
   const composer = page.getByPlaceholder("Message Chief");
   await expect(composer).toBeVisible({ timeout: 30_000 });
