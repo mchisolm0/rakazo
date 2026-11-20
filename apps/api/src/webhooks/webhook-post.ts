@@ -15,9 +15,10 @@ export function webhookPostSchema(linkSchemes: readonly string[]) {
   const button = LinkButton.refine(
     ({ url }) => URL.canParse(url) && linkSchemes.includes(new URL(url).protocol.slice(0, -1)),
     { message: "Unsupported button URL" },
-  );
+  ).transform((parsed) => ({ ...parsed, url: new URL(parsed.url).href }));
   return z.object({
-    text: z.string().trim().min(1),
+    // Kept as written: trimming would change Markdown such as an indented code block.
+    text: z.string().refine((text) => text.trim().length > 0),
     buttons: z.array(button).max(MAX_LINK_BUTTONS).optional(),
   });
 }
@@ -53,8 +54,8 @@ export async function postWebhookMessage(
     return { messageId: message.id, seq: event.seq };
   }, THREAD_LOCK_TRANSACTION_OPTIONS);
   await bestEffort("webhook post notify", deps.events.notify(threadId, committed.seq));
-  // Not awaited: the sender's answer does not wait on anyone's devices.
-  void bestEffort(
+  // Awaited, so a deploy draining requests does not drop the push.
+  await bestEffort(
     "webhook post notification",
     notifyBotPost(deps, { spaceId, botId, threadId, text: post.text }),
   );

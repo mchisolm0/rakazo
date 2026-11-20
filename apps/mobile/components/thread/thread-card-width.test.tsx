@@ -101,6 +101,7 @@ vi.mock("@rakazo/chat-ui/native", () => ({
   MarkdownLongPressContext: createContext(undefined),
   ChatMarkdown: ({ children }: { children: string }) => <p>{children}</p>,
   withBlockMentions: <T,>(blocks: T) => blocks,
+  useNativeLinkConfirm: () => vi.fn(),
 }));
 
 vi.mock("../messages/message-caption", () => ({

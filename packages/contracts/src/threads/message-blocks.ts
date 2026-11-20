@@ -84,8 +84,8 @@ export const MAX_LINK_BUTTONS = 4;
 
 /** A button that opens its URL. The server checks the scheme before it stores one. */
 export const LinkButton = z.object({
-  label: z.string().trim().min(1).max(60),
-  url: z.string().max(2048),
+  label: z.string().trim().min(1),
+  url: z.string(),
 });
 export type LinkButton = z.infer<typeof LinkButton>;
 

@@ -11,7 +11,7 @@ import type {
 } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
 import { isPeerReceiptBlocks, isToolActivityBlock, otherAuthor } from "@rakazo/core";
-import { BotAvatar, Button, buttonVariants, cn, resolvePersonaColorDef } from "@rakazo/ui-web";
+import { BotAvatar, Button, cn, resolvePersonaColorDef } from "@rakazo/ui-web";
 import { UserRound } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { CollaborationMarker } from "../../../components/ai/CollaborationMarker";
@@ -19,6 +19,7 @@ import { ComputerCard } from "../../../components/computers/ComputerCard";
 import { ArtifactFileCard } from "../../../components/messages/ArtifactFileCard";
 import { AskCard } from "../../../components/messages/AskCard";
 import { CloudAgentCard } from "../../../components/messages/CloudAgentCard";
+import { LinkButtons } from "../../../components/messages/LinkButtons";
 import { McpAppCard } from "../../../components/messages/McpAppCard";
 import { OutgoingDraftCard } from "../../../components/messages/OutgoingDraftCard";
 import { SubagentCard } from "../../../components/messages/SubagentCard";
@@ -648,25 +649,7 @@ export const MessageView = memo(function MessageView({
               </div>
             );
           }
-          if (block.kind === "buttons") {
-            return (
-              <div key={i} className="flex flex-wrap gap-2">
-                {block.buttons.map((button, index) => (
-                  <a
-                    key={`${index}:${button.url}`}
-                    href={button.url}
-                    // An app link hands off to its app; only a web page needs a new tab.
-                    {...(button.url.startsWith("https:")
-                      ? { target: "_blank", rel: "noreferrer" }
-                      : {})}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
-                  >
-                    {button.label}
-                  </a>
-                ))}
-              </div>
-            );
-          }
+          if (block.kind === "buttons") return <LinkButtons key={i} buttons={block.buttons} />;
           if (block.kind === "card") {
             return (
               <div key={i} className="flex justify-start">

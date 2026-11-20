@@ -43,7 +43,6 @@ import type { UserBubble } from "../../lib/messages/user-bubble";
 import { withUserBubble } from "../../lib/messages/user-bubble";
 import { useResolvedAppearance } from "../../lib/native/native";
 import { PageCard } from "../../lib/pages/page-card";
-import { openExternalUrl } from "../../lib/platform/open-url";
 import { botDisplayName, speakerColorFor } from "../../lib/thread/thread-message-text";
 import { chatTargetInput } from "../../lib/thread/thread-target";
 import { AppConnectCard } from "../cards/AppConnectCard";
@@ -61,9 +60,9 @@ import type { ImageArtifactPreviewTarget } from "../media/image-artifact-viewer"
 import { InlineImageAttachment } from "../media/inline-image-attachment";
 import { MessageMentions } from "../messages/bot-mention";
 import { MessageCaption } from "../messages/message-caption";
-import { NativeActionButton } from "../native/native-action-button";
 import { AgentEventLabel } from "./agent-event-label";
 import { AskBlock } from "./ask-block";
+import { LinkButtons } from "./link-buttons";
 import { McpAppCard } from "./mcp-app-card";
 import type { MessageRowActions } from "./message-row";
 import { PeerReceiptLine } from "./peer-receipt-line";
@@ -860,20 +859,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
           onAccessibilityAction={actionProps.onAccessibilityAction}
         />
       ))}
-      {linkButtons.length > 0 ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {linkButtons.map((button, index) => (
-            <NativeActionButton
-              key={`${index}:${button.url}`}
-              label={button.label}
-              prominence="secondary"
-              size="compact"
-              fill={false}
-              onPress={() => void openExternalUrl(button.url)}
-            />
-          ))}
-        </View>
-      ) : null}
+      {linkButtons.length > 0 ? <LinkButtons buttons={linkButtons} /> : null}
     </View>
   );
 });
