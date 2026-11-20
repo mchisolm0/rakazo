@@ -224,7 +224,7 @@ const dictation = vi.hoisted(() => ({
   levels: { value: [] },
   toggle: vi.fn(),
   cancel: vi.fn(),
-  onWords: (_text: string, _final?: boolean) => {},
+  onWords: (_text: string) => {},
 }));
 vi.mock("./dictation-bar", () => ({
   DictationBar: (props: { onCancel: () => void; onFinish: () => void }) =>
@@ -236,7 +236,7 @@ vi.mock("./dictation-bar", () => ({
     ),
 }));
 vi.mock("../../lib/composer/composer-dictation", () => ({
-  useComposerDictation: (opts: { onWords: (text: string, final?: boolean) => void }) => {
+  useComposerDictation: (opts: { onWords: (text: string) => void }) => {
     dictation.onWords = opts.onWords;
     return dictation;
   },
@@ -1289,16 +1289,12 @@ describe("thread composer isolation", () => {
     expect(props.startVoiceCall).toHaveBeenCalledOnce();
   });
 
-  it("adds dictated words after the draft, and drops them once the draft is edited", () => {
+  it("adds the dictated transcript after the draft", () => {
     type("Remind me");
     press("Dictate");
     expect(dictation.toggle).toHaveBeenCalledOnce();
-    act(() => dictation.onWords("to buy"));
     act(() => dictation.onWords("to buy milk"));
     expect(container.querySelector("input")!.value).toBe("Remind me to buy milk");
-    type("Remind me to buy milk!");
-    act(() => dictation.onWords("to buy milk and eggs"));
-    expect(container.querySelector("input")!.value).toBe("Remind me to buy milk!");
   });
 
   function sendButton() {
@@ -1321,7 +1317,7 @@ describe("thread composer isolation", () => {
     type("Note");
     press("Dictate");
     type("Note:");
-    act(() => dictation.onWords("call the bank", true));
+    act(() => dictation.onWords("call the bank"));
     expect(container.querySelector("input")!.value).toBe("Note: call the bank");
   });
 

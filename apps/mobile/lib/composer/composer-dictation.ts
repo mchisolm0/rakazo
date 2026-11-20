@@ -66,11 +66,8 @@ export function useComposerDictation({
 }: {
   /** Something else owns the microphone, such as a call. */
   disabled: boolean;
-  /**
-   * The words heard so far: called live on-device, and once with `final` after a provider
-   * transcribes, so those words are kept even if the box changed while recording.
-   */
-  onWords: (text: string, final?: boolean) => void;
+  /** The transcript, once, after the recording is transcribed. */
+  onWords: (text: string) => void;
 }) {
   const { t } = useLingui();
   const router = useRouter();
@@ -153,6 +150,7 @@ export function useComposerDictation({
     mine.live = true;
     levels.value = QUIET_LEVELS;
     setStartedAt(Date.now());
+    setStatus("listening");
     return true;
   }
 
@@ -161,13 +159,10 @@ export function useComposerDictation({
     if (session.current !== mine) return;
     // As in T3 Code, the phone transcribes whenever it can, whichever voice reads replies: it
     // needs only the microphone and keeps the audio on the phone. Its first use downloads the
-    // language's model, so the mic shows it preparing rather than listening meanwhile.
-    const transcribe = await appleTranscriber(lang, () => {
-      if (session.current === mine) setStatus("preparing");
-    });
+    // language's model, which the bar shows as preparing.
+    const transcribe = await appleTranscriber(lang);
     if (session.current !== mine) return;
     if (transcribe) {
-      setStatus("listening");
       if (!(await goLive(mine))) return;
       const stopped = new AbortController();
       mine.finish = () => {
@@ -187,7 +182,7 @@ export function useComposerDictation({
         markTranscribing(mine);
         mine.finish = () => {};
         const text = await transcribe(audio.uri);
-        if (end(mine) && text) onWordsRef.current(text, true);
+        if (end(mine) && text) onWordsRef.current(text);
       } finally {
         deleteQuietly(audio.uri);
       }
@@ -265,7 +260,7 @@ export function useComposerDictation({
         deadline.dispose();
       }
       if (!end(mine) || requestContext.sessionGeneration !== currentSessionGeneration()) return;
-      if (text.trim()) onWordsRef.current(text.trim(), true);
+      if (text.trim()) onWordsRef.current(text.trim());
       return;
     }
     if (!(await goLive(mine))) return;
@@ -279,9 +274,6 @@ export function useComposerDictation({
       lang,
       endpointMs: DICTATION_PAUSE_MS,
       signal: mine.cancel.signal,
-      onInterim: (text) => {
-        if (session.current === mine) onWordsRef.current(text);
-      },
       onFinal: (text) => {
         if (end(mine)) onWordsRef.current(text);
       },
@@ -299,7 +291,7 @@ export function useComposerDictation({
       return;
     }
     if (disabled) return;
-    // Until the path is chosen, a second tap cancels.
+    // Until the microphone opens, the bar shows it preparing and finishing cancels.
     const mine: Session = {
       cancel: new AbortController(),
       finish: () => cancel(),
@@ -308,7 +300,7 @@ export function useComposerDictation({
       hidden: false,
     };
     session.current = mine;
-    setStatus("listening");
+    setStatus("preparing");
     start(mine).catch((error: unknown) => {
       mine.cancel.abort();
       if (!end(mine) || error instanceof AiConsentBlocked) return;

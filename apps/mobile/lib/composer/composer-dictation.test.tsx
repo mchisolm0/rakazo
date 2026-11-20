@@ -19,10 +19,7 @@ const voice = vi.hoisted(() => ({
   deleteQuietly: vi.fn(),
   transcribeClip: vi.fn(),
   appleTranscriber: vi.fn(
-    async (
-      _lang: string,
-      _onPreparing: () => void,
-    ): Promise<((uri: string) => Promise<string>) | null> => null,
+    async (_lang: string): Promise<((uri: string) => Promise<string>) | null> => null,
   ),
 }));
 
@@ -97,7 +94,7 @@ import { useComposerDictation } from "./composer-dictation";
 
 let root: Root;
 let container: HTMLDivElement;
-let words: Array<{ text: string; final?: boolean }>;
+let words: string[];
 let toggle: () => void;
 let mounted = false;
 
@@ -105,8 +102,8 @@ function Harness() {
   const [, redraw] = useState(0);
   const dictation = useComposerDictation({
     disabled: false,
-    onWords: (text, final) => {
-      words.push({ text, final });
+    onWords: (text) => {
+      words.push(text);
       redraw((n) => n + 1);
     },
   });
@@ -174,14 +171,14 @@ it("lands dictated words when the app goes to the background during transcriptio
     for (const listener of app.appState) listener("background");
   });
   await finishTranscription(pending, "the latest report");
-  expect(words).toEqual([{ text: "the latest report", final: true }]);
+  expect(words).toEqual(["the latest report"]);
 });
 
 it("lands dictated words when the chat blurs during transcription", async () => {
   const pending = await stopDuringTranscription();
   act(() => app.blur?.());
   await finishTranscription(pending, "the latest report");
-  expect(words).toEqual([{ text: "the latest report", final: true }]);
+  expect(words).toEqual(["the latest report"]);
 });
 
 it("drops a transcription when the composer unmounts", async () => {
@@ -216,15 +213,10 @@ it.each(["blur", "unmount"])(
 );
 
 it("records until the second tap, then transcribes on the phone in one pass", async () => {
-  const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
   const dictation = await import("../voice/dictation");
-  vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
   const transcribe = vi.fn(async () => "Pick up milk, then call Sam.");
   const prepared = deferred<typeof transcribe>();
-  voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
-    onPreparing();
-    return prepared.promise;
-  });
+  voice.appleTranscriber.mockImplementationOnce(() => prepared.promise);
   voice.recordAudio.mockImplementationOnce(async (_cancel: AbortSignal, until: AbortSignal) => {
     await new Promise<void>((resolve) => until.addEventListener("abort", () => resolve()));
     return { uri: "file:///clip.m4a", mimeType: "audio/m4a" };
@@ -237,9 +229,7 @@ it("records until the second tap, then transcribes on the phone in one pass", as
   await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
   expect(container.textContent).toBe("listening");
   await act(async () => toggle());
-  await vi.waitFor(() =>
-    expect(words).toEqual([{ text: "Pick up milk, then call Sam.", final: true }]),
-  );
+  await vi.waitFor(() => expect(words).toEqual(["Pick up milk, then call Sam."]));
   expect(transcribe).toHaveBeenCalledWith("file:///clip.m4a");
   expect(voice.deleteQuietly).toHaveBeenCalledWith("file:///clip.m4a");
   expect(dictation.listen).not.toHaveBeenCalled();
@@ -258,7 +248,7 @@ it("dictates on the phone at full quality even when a hosted voice reads replies
   await vi.waitFor(() => expect(voice.recordAudio).toHaveBeenCalled());
   expect(voice.recordAudio.mock.calls[0]?.[2]).toMatchObject({ onDevice: true });
   await act(async () => toggle());
-  await vi.waitFor(() => expect(words).toEqual([{ text: "Ship it on Thursday.", final: true }]));
+  await vi.waitFor(() => expect(words).toEqual(["Ship it on Thursday."]));
   expect(resolveVoiceCallPlan).not.toHaveBeenCalled();
   expect(voice.recordClip).not.toHaveBeenCalled();
   expect(dictation.available).not.toHaveBeenCalled();
@@ -267,10 +257,7 @@ it("dictates on the phone at full quality even when a hosted voice reads replies
 it("drops a session cancelled while the model prepares", async () => {
   const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
   const prepared = deferred<null>();
-  voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
-    onPreparing();
-    return prepared.promise;
-  });
+  voice.appleTranscriber.mockImplementationOnce(() => prepared.promise);
   await act(async () => toggle());
   await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
   await act(async () => app.blur?.());
@@ -281,13 +268,8 @@ it("drops a session cancelled while the model prepares", async () => {
 });
 
 it("cancels on a tap while the model prepares", async () => {
-  const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
-  vi.mocked(resolveVoiceCallPlan).mockResolvedValueOnce({ kind: "device", transcribe: false });
   const prepared = deferred<null>();
-  voice.appleTranscriber.mockImplementationOnce(async (_lang, onPreparing) => {
-    onPreparing();
-    return prepared.promise;
-  });
+  voice.appleTranscriber.mockImplementationOnce(() => prepared.promise);
   await act(async () => toggle());
   await vi.waitFor(() => expect(container.textContent).toBe("preparing"));
   await act(async () => toggle());
@@ -295,4 +277,15 @@ it("cancels on a tap while the model prepares", async () => {
   await act(async () => prepared.resolve(null));
   expect(container.textContent).toBe("idle");
   expect(voice.recordAudio).not.toHaveBeenCalled();
+});
+
+it("shows preparing until a fallback's microphone opens, then listening", async () => {
+  const { resolveVoiceCallPlan } = await import("../calls/voice-call-entry");
+  const plan = deferred<{ kind: "provider"; transcribe: true }>();
+  vi.mocked(resolveVoiceCallPlan).mockReturnValueOnce(plan.promise);
+  await act(async () => toggle());
+  expect(container.textContent).toBe("preparing");
+  await act(async () => plan.resolve({ kind: "provider", transcribe: true }));
+  await vi.waitFor(() => expect(voice.recordClip).toHaveBeenCalled());
+  expect(container.textContent).toBe("listening");
 });

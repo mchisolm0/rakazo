@@ -164,20 +164,10 @@ export function ThreadComposer({
     setMentionBindings(next);
   }
   const [selectedSkill, setSelectedSkill] = useState<AgentSkillCatalogEntry | null>(null);
-  // Dictated words follow the text that was there when the mic opened. Once someone edits the
-  // box meanwhile, later words are dropped instead of overwriting the edit.
-  const dictatedBase = useRef<string | null>(null);
-  const dictated = useRef("");
-  function showDictation(words: string, final = false) {
-    let base = dictatedBase.current;
-    if (base === null) return;
-    // Live words never overwrite an edit; a provider's one-off transcript joins the edited text.
-    if (draftRef.current !== dictated.current) {
-      if (!final) return;
-      base = draftRef.current;
-    }
-    const next = !words ? base : base.trim() ? `${base.trimEnd()} ${words}` : words;
-    dictated.current = next;
+  /** Adds a dictation's transcript after whatever the box holds now. */
+  function showDictation(words: string) {
+    const base = draftRef.current;
+    const next = base.trim() ? `${base.trimEnd()} ${words}` : words;
     draftRef.current = next;
     setDraft(next);
     const end = next.length;
@@ -190,13 +180,6 @@ export function ThreadComposer({
     setSlashQuery(null);
   }
   const dictation = useComposerDictation({ disabled: onCall, onWords: showDictation });
-  function toggleDictation() {
-    if (dictation.status === "idle") {
-      dictatedBase.current = draftRef.current;
-      dictated.current = draftRef.current;
-    }
-    dictation.toggle();
-  }
   // Saving waits for a pause in typing; closing the conversation or leaving the app saves at once.
   // Set while the composer holds text that storage does not have yet.
   const pendingSave = useRef<(() => boolean) | null>(null);
@@ -840,7 +823,7 @@ export function ThreadComposer({
                   accessibilityRole="button"
                   accessibilityLabel={t`Dictate`}
                   hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                  onPress={toggleDictation}
+                  onPress={dictation.toggle}
                   style={{ marginBottom: pillInset }}
                 >
                   <GlassSurface
