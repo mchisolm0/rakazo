@@ -5,7 +5,7 @@ import {
   requestDeadline,
   VOICE_RESPONSE_TIMEOUT_MS,
 } from "@rakazo/core";
-import { bestEffort } from "@rakazo/logging";
+import { bestEffort } from "@rakazo/logging/best-effort";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, AppState } from "react-native";
