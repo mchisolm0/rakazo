@@ -76,16 +76,19 @@ export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<stri
     const texts = messages.flatMap((message) =>
       storedMessageBlocks(message).flatMap((block) => (block.kind === "text" ? [block.text] : [])),
     );
+    const named = [...bots.map((bot) => bot.name), ...members.map((row) => row.member.user.name)]
+      .map((name) => name.trim())
+      .filter(Boolean);
+    // A repository a bot or person shares a name with takes their spelling ("PlatoChat").
+    const spelling = new Map(named.map((name) => [name.toLowerCase(), name]));
     const words = new Map<string, string>();
+    // Repositories come first, so a Space's member list cannot crowd them out.
     for (const word of [
-      // Names a Space's member list cannot crowd out come first.
-      ...repositoryNames(texts),
-      ...bots.map((bot) => bot.name),
-      ...members.map((row) => row.member.user.name),
+      ...repositoryNames(texts).map((name) => spelling.get(name.toLowerCase()) ?? name),
+      ...named,
     ]) {
-      const trimmed = word.trim();
-      const key = trimmed.toLowerCase();
-      if (trimmed && !words.has(key)) words.set(key, trimmed);
+      const key = word.toLowerCase();
+      if (!words.has(key)) words.set(key, word);
     }
     return [...words.values()].slice(0, MAX_WORDS);
   });
