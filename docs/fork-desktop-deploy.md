@@ -39,6 +39,10 @@ A shell on the mini is worth more than anything else here, so the trust is narro
    "ssh": [{ "action": "accept", "src": ["tag:rakazo-deploy"], "dst": ["tag:server"], "users": ["<user>"] }]
    ```
 
+   Replace `<user>` with the mini's login user, the same value as `DEPLOY_SSH_USER` below. Left
+   as is, the mini's Tailscale SSH refuses the deploy with "tailnet policy does not permit you to
+   SSH as user".
+
 2. Under Trust credentials, add an OpenID Connect credential: issuer GitHub Actions, subject
    `<prefix>:environment:desktop-deploy`, scope Auth Keys write, tag `tag:rakazo-deploy`. The
    prefix is `sub_claim_prefix` from `gh api repos/<owner>/rakazo/actions/oidc/customization/sub`;
