@@ -61,13 +61,13 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
   const total = (totals: Totals | undefined, field: UsageTotalField) => {
     const value = totals?.[field];
     if (value == null) return "—";
-    const text =
-      field !== "costUsd"
-        ? count.format(value)
-        : value > 0 && value < 0.01
-          ? `<${usd.format(0.01)}`
-          : usd.format(value);
-    return totals?.incomplete.includes(field) ? `${text}+` : text;
+    if (field !== "costUsd") {
+      const text = count.format(value);
+      return totals?.incomplete.includes(field) ? `${text}+` : text;
+    }
+    // A floor rounds down, so it never claims more than the calls that report a cost.
+    if (totals?.incomplete.includes(field)) return `${usd.format(Math.floor(value * 100) / 100)}+`;
+    return value > 0 && value < 0.01 ? `<${usd.format(0.01)}` : usd.format(value);
   };
 
   const ranges: { id: UsageDateRange; label: string }[] = [

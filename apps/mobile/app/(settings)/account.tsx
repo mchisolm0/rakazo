@@ -148,16 +148,15 @@ export default function Account() {
     totals.totalTokens == null
       ? "—"
       : floor(totals, "totalTokens", count.format(totals.totalTokens));
-  const cost = (totals: Pick<UsageSummary, "costUsd" | "incomplete">) =>
-    totals.costUsd == null
+  const cost = ({ costUsd, incomplete }: Pick<UsageSummary, "costUsd" | "incomplete">) =>
+    costUsd == null
       ? undefined
-      : floor(
-          totals,
-          "costUsd",
-          totals.costUsd > 0 && totals.costUsd < 0.01
-            ? `<${usd.format(0.01)}`
-            : usd.format(totals.costUsd),
-        );
+      : // A floor rounds down, so it never claims more than the calls that report a cost.
+        incomplete?.includes("costUsd")
+        ? `${usd.format(Math.floor(costUsd * 100) / 100)}+`
+        : costUsd > 0 && costUsd < 0.01
+          ? `<${usd.format(0.01)}`
+          : usd.format(costUsd);
   const usageBlock = (
     <SettingsRow
       key="usage"

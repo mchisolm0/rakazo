@@ -429,10 +429,16 @@ export function contentRoutes(ctx: RouterContext) {
           day = nextDay(day)
         ) {
           const date = overTimeUnit === "month" ? `${day.slice(0, 7)}-01` : day;
-          const point = points.get(day) ?? empty;
+          const point = points.get(day);
           const last = overTime.at(-1);
           if (last?.date !== date) {
-            overTime.push({ date, ...point });
+            overTime.push({ date, ...(point ?? empty) });
+            continue;
+          }
+          // A quiet day adds nothing, so a month whose calls lack a figure still reads unknown.
+          if (!point) continue;
+          if (last.modelCalls === 0) {
+            Object.assign(last, point);
             continue;
           }
           last.modelCalls += point.modelCalls;

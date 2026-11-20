@@ -222,10 +222,14 @@ it("marks totals that leave out calls without a count as a floor", async () => {
   try {
     breakdown.fetch.mockImplementation(async (input: Input) => {
       const usage = usageFor(input);
-      return { ...usage, totals: { ...usage.totals, incomplete: ["totalTokens", "costUsd"] } };
+      return {
+        ...usage,
+        totals: { ...usage.totals, costUsd: 0.0165, incomplete: ["totalTokens", "costUsd"] },
+      };
     });
     await panel.pick("Today");
-    expect(panel.totals()).toEqual(["3", "467+", "$0.04+"]);
+    // A floor rounds down rather than up.
+    expect(panel.totals()).toEqual(["3", "467+", "$0.01+"]);
   } finally {
     await panel.unmount();
   }

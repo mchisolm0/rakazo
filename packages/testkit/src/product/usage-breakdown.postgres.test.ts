@@ -239,6 +239,25 @@ describeBreakdown("usage.breakdown", () => {
     expect(mixed.models.find((m) => m.model === "unpriced")?.costUsd).toBeNull();
     expect(mixed.models.find((m) => m.model === "m1")?.costUsd).toBeCloseTo(0.0115);
 
+    // A month whose only call reports no tokens or cost reads unknown, not zero.
+    await prisma.usageRecord.create({
+      data: {
+        ...owner,
+        botId: alpha.id,
+        provider: "p",
+        model: "unpriced",
+        createdAt: new Date(dayStart - 200 * DAY),
+      },
+    });
+    const history = await get({ range: "all", botId: alpha.id });
+    expect(history.overTimeUnit).toBe("month");
+    const quietMonth = `${utcDay(dayStart - 200 * DAY).slice(0, 7)}-01`;
+    expect(history.overTime.find((point) => point.date === quietMonth)).toMatchObject({
+      modelCalls: 1,
+      totalTokens: null,
+      costUsd: null,
+    });
+
     const elsewhere = await rpc<UsageBreakdown>(app, other, "usage/breakdown", { range: "all" });
     expect(summary(elsewhere)).toEqual({ runs: 1, calls: 1, tokens: 1_000_000 });
     expect(names(elsewhere)).toEqual(["Elsewhere"]);
