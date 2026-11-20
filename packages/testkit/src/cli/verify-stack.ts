@@ -160,9 +160,6 @@ const databaseName = (url: string) => new URL(url).pathname.slice(1);
 async function up() {
   const id = `${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}-${Math.random().toString(16).slice(2, 6)}`;
   const pg = argument("--pg") ?? process.env.VERIFY_PG_URL;
-  if (pg && !["127.0.0.1", "localhost", "[::1]"].includes(new URL(pg).hostname)) {
-    throw new Error("--pg must be a Postgres server on this machine (127.0.0.1 or localhost).");
-  }
   const dir = path.join(REPORTS, id);
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const log = openSync(path.join(dir, "stack.log"), "a");
@@ -232,6 +229,11 @@ async function serve(id: string) {
     let migrationUrl: string;
     let runtimeLogin = RUNTIME_LOGIN;
     if (serverUrl) {
+      // Query options such as `?host=` can redirect the connection, so none are accepted.
+      const parsed = new URL(serverUrl);
+      if (parsed.search || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) {
+        throw new Error("--pg must be a Postgres URL on 127.0.0.1 or localhost, with no options");
+      }
       const name = `rakazo_verify_${id.replace(/\W/g, "_").toLowerCase()}`;
       runtimeLogin = { user: name, password: RUNTIME_LOGIN.password };
       await query(serverUrl, `CREATE DATABASE "${name}"`);
@@ -277,16 +279,17 @@ async function serve(id: string) {
     // the real queue so the worker is exercised.
     delete env.REALTIME_DATABASE_URL;
     delete env.WAKEUP_DRIVER;
-    // dev.mjs reads `.env` itself for these, so they are set empty to win.
-    for (const name of ["RAKAZO_DEV_RUN_WITH", "RAKAZO_DEV_TAILNET", "RAKAZO_DEV_HOST"]) {
-      env[name] = "";
-    }
+    // dev.mjs reads `.env` itself for these, so they are set here to win.
+    env.RAKAZO_DEV_RUN_WITH = "";
+    env.RAKAZO_DEV_TAILNET = "";
+    env.RAKAZO_DEV_HOST = "127.0.0.1";
     const devLog = openSync(path.join(dir, "dev.log"), "a");
     const dev = spawn("pnpm", ["dev"], { cwd: root, env, stdio: ["ignore", devLog, devLog] });
     if (dev.pid) {
       const pid = dev.pid;
       releases.push(() => stopTree(pid));
     }
+    dev.once("error", (error) => stop.abort(error));
     dev.once("exit", (code, signal) => {
       stop.abort(new Error(`pnpm dev exited (${signal ?? code}); see dev.log`));
     });
@@ -331,7 +334,8 @@ async function serve(id: string) {
   }
   await rm(dataDir, { recursive: true, force: true });
   await rm(path.join(dir, ".rakazo-dev-branches"), { recursive: true, force: true });
-  await writeState({ ...state, ...outcome });
+  // The database is gone, and its owner URL can hold a local server's admin password.
+  await writeState({ ...state, ...outcome, migrationUrl: undefined });
   process.exit(0);
 }
 
@@ -392,15 +396,19 @@ async function doctor() {
   const expected = readdirSync(path.join(root, "packages/db/prisma/migrations"), {
     withFileTypes: true,
   }).filter((entry) => entry.isDirectory()).length;
-  const [applied] = await query<{ count: number }>(
-    await servedDatabaseUrl(run),
-    "SELECT count(*)::int AS count FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL",
-  );
-  check(
-    "every migration in this checkout applied",
-    applied?.count === expected,
-    `${applied?.count} of ${expected}`,
-  );
+  try {
+    const [applied] = await query<{ count: number }>(
+      await servedDatabaseUrl(run),
+      "SELECT count(*)::int AS count FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL",
+    );
+    check(
+      "every migration in this checkout applied",
+      applied?.count === expected,
+      `${applied?.count} of ${expected}`,
+    );
+  } catch (error) {
+    check("every migration in this checkout applied", false, String(error));
+  }
   const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
   console.log(
     `run ${run.id}  ${run.webUrl}  started at ${run.head.slice(0, 9)}, HEAD ${head.slice(0, 9)}`,
@@ -545,7 +553,9 @@ async function drive(script: string | undefined) {
 
 async function sql(text: string | undefined) {
   if (!text) throw new Error('Usage: pnpm verify:stack sql "<query>" [--run <id>]');
-  const pool = createPool(await servedDatabaseUrl(selectRun()));
+  const run = selectRun();
+  if (!supervising(run)) throw new Error(`Run ${run.id} is not running`);
+  const pool = createPool(await servedDatabaseUrl(run));
   const client = await pool.connect();
   try {
     await client.query("BEGIN READ ONLY");
@@ -561,7 +571,7 @@ async function sql(text: string | undefined) {
 async function down() {
   const run = selectRun();
   if (supervising(run)) process.kill(run.supervisorPid, "SIGTERM");
-  await pollUntil(() => !alive(run.supervisorPid), {
+  await pollUntil(() => !supervising(run), {
     intervalMs: 500,
     timeoutMs: 60_000,
     waitingFor: `run ${run.id} to stop`,

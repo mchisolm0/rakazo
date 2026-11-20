@@ -18,7 +18,7 @@ pnpm verify:stack up                                   # Postgres in a Docker co
 pnpm verify:stack up --pg postgres://<superuser>@127.0.0.1:<port>/postgres   # no Docker
 ```
 
-`--pg` (or `VERIFY_PG_URL`) takes a superuser URL for a throwaway Postgres server on this machine; anything but `127.0.0.1` or `localhost` is refused. The run creates a database and a login named `rakazo_verify_<run>` on it and drops both, plus any branch copy, on `down`. Never point it at a server holding data you care about.
+`--pg` (or `VERIFY_PG_URL`, which keeps a password out of the process list) takes a superuser URL for a throwaway Postgres server on this machine; anything but `127.0.0.1` or `localhost`, or a URL with query options, is refused. The run creates a database and a login named `rakazo_verify_<run>` on it and drops both, plus any branch copy, on `down`. Never point it at a server holding data you care about.
 
 `up` starts a detached supervisor that runs the repo's own `pnpm dev` (API, worker, web, sandbox supervisor) with:
 
