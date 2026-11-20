@@ -315,10 +315,10 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
 +}
 diff --git a/ios/transcription/TaughtWords.swift b/ios/transcription/TaughtWords.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..8fb95e77c7f0be648e8f2799f9310d5999f76048
+index 0000000000000000000000000000000000000000..a16da901f93d181288aa0d6c3454675303e7a6e4
 --- /dev/null
 +++ b/ios/transcription/TaughtWords.swift
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,128 @@
 +import Foundation
 +
 +/// One run of transcribed text and the audio it was heard in. Runs without a time range
@@ -362,11 +362,16 @@ index 0000000000000000000000000000000000000000..8fb95e77c7f0be648e8f2799f9310d59
 +      let word = heard.text
 +      let joined = out[best.first...best.last].map(\.text).joined()
 +      var lead = joined.prefix { $0.isWhitespace || $0.isPunctuation }
-+      if word.hasPrefix(lead.drop { $0.isWhitespace }) { lead = lead.prefix { $0.isWhitespace } }
++      let leadMarks = lead.drop { $0.isWhitespace }
++      if let owned = (0...leadMarks.count).reversed().first(where: { word.hasPrefix(leadMarks.suffix($0)) }) {
++        lead = lead.dropLast(owned)
++      }
 +      let rest = joined.dropFirst(lead.count)
 +      var tail = Substring(rest.reversed().prefix { $0.isWhitespace || $0.isPunctuation }.reversed())
 +      let tailMarks = tail.prefix { !$0.isWhitespace }
-+      if !tailMarks.isEmpty && word.hasSuffix(tailMarks) { tail = tail.dropFirst(tailMarks.count) }
++      if let owned = (0...tailMarks.count).reversed().first(where: { word.hasSuffix(tailMarks.prefix($0)) }) {
++        tail = tail.dropFirst(owned)
++      }
 +      let current = rest.dropLast(tail.count)
 +      if current == word { continue }
 +      // A plain taught word that is also ordinary speech ("Will", "every day") keeps the long-form
