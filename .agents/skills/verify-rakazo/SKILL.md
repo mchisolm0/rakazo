@@ -11,20 +11,20 @@ Everything goes through `pnpm verify:stack` (`packages/testkit/src/cli/verify-st
 
 ## Launch
 
-Once per checkout, `pnpm install`. Once per machine, `pnpm --filter @rakazo/web exec playwright install chromium`.
+Once per checkout, `pnpm install` and `pnpm db:generate`. Once per machine, `pnpm --filter @rakazo/web exec playwright install chromium`.
 
 ```sh
 pnpm verify:stack up                                   # Postgres in a Docker container
 pnpm verify:stack up --pg postgres://<superuser>@127.0.0.1:<port>/postgres   # no Docker
 ```
 
-`--pg` (or `VERIFY_PG_URL`) takes a superuser URL for a local, throwaway Postgres server. The run creates `rakazo_verify_<run>` on it and drops it, plus any branch copy, on `down`. Never point it at a shared, staging, or production server.
+`--pg` (or `VERIFY_PG_URL`) takes a superuser URL for a throwaway Postgres server on this machine; anything but `127.0.0.1` or `localhost` is refused. The run creates a database and a login named `rakazo_verify_<run>` on it and drops both, plus any branch copy, on `down`. Never point it at a server holding data you care about.
 
 `up` starts a detached supervisor that runs the repo's own `pnpm dev` (API, worker, web, sandbox supervisor) with:
 
 - free ports, a data dir under the run folder, and the servers connecting as a runtime login, so row-level security applies as in a deployment
-- `RAKAZO_ENV_FILE=none` and provider keys blanked, so a worktree's copied `.env` (real keys, `RAKAZO_DEV_RUN_WITH`, tailnet sharing) never reaches the run
-- the scripted model, fake computers, the cloud-agent, email, and wallet emulators, and analytics off
+- only `PATH`, `HOME`, and a few other basics from your shell, and `RAKAZO_ENV_FILE=none`, so neither your shell's variables nor a worktree's copied `.env` (real keys, `RAKAZO_DEV_RUN_WITH`, tailnet sharing, a public bind) reach the run
+- the scripted model, fake computers, the cloud-agent, email, and wallet emulators, analytics off, and the real job queue, so the worker runs as it does in `pnpm dev`
 
 It prints the web URL, the seeded account (`verify@rakazo.test` / `verify-password-1234`), and the run id. Ready means the API answers `/health`, the web server answers, and the seeded account signed up through the web proxy, which only works after every migration ran. A warm checkout is ready in about 15 seconds; a fresh one also generates the Prisma client first.
 
@@ -81,7 +81,7 @@ Each drive writes `verify-report/<run>/drives/<script>-<time>/` (gitignored):
 
 Server logs for every service are in `verify-report/<run>/dev.log`; the supervisor's in `stack.log`.
 
-Capture before and after the action. Prove a change persisted with a reload or a second view, not a toast. Check side effects in the database with a read-only query. Tables are mostly lowercase plurals (`bots`, `spaces`, `messages`, but `"user"`), and columns keep Prisma's camelCase names, so quote them. Message text is encrypted, so check its rows, not its words.
+Capture before and after the action. Prove a change persisted with a reload or a second view, not a toast. Check side effects in the database with one read-only statement, run on whichever database the servers use (a branch with new migrations gets a copy). Tables are mostly lowercase plurals (`bots`, `spaces`, `messages`, but `"user"`), and columns keep Prisma's camelCase names, so quote them. Message text is encrypted, so check its rows, not its words.
 
 ```sh
 pnpm verify:stack sql 'select name from bots order by "createdAt" desc limit 5'

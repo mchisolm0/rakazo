@@ -11,7 +11,6 @@
 //
 // `up` hands the stack to a detached supervisor (`serve`), which owns the database, `pnpm dev`,
 // and their teardown, so a later command or a crashed shell never strands either.
-import type { ChildProcess } from "node:child_process";
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, openSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
@@ -34,6 +33,9 @@ const ACCOUNT = { email: "verify@rakazo.test", password: "verify-password-1234",
 const RUNTIME_LOGIN = { user: "rakazo_verify", password: "rakazo-verify-runtime" };
 // First start compiles the Prisma client and runs every migration before the servers listen.
 const READY_TIMEOUT_MS = 300_000;
+const STOPPED = "stopped";
+// All the servers inherit from the caller's shell; everything else is set here.
+const INHERITED = ["PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "LANG", "LC_ALL", "TERM"];
 
 export type RunState = {
   id: string;
@@ -44,8 +46,7 @@ export type RunState = {
   webUrl: string;
   apiUrl: string;
   /** Owner login; the servers connect as the runtime login, so row-level security applies. */
-  migrationUrl: string;
-  database: { kind: "container" } | { kind: "server"; serverUrl: string };
+  migrationUrl?: string;
   account: typeof ACCOUNT;
   status: "starting" | "ready" | "failed" | "stopped";
   error?: string;
@@ -74,7 +75,7 @@ const readState = (dir: string): RunState => JSON.parse(readFileSync(statePath(d
 // Written whole and renamed, so a reader never sees half a file.
 async function writeState(state: RunState) {
   const temporary = `${statePath(state.dir)}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`);
+  await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
   await rename(temporary, statePath(state.dir));
 }
 
@@ -88,6 +89,15 @@ function alive(pid: number | undefined) {
   }
 }
 
+/** Whether the run's supervisor is still running, checked by its command line, not only its PID. */
+function supervising(run: RunState) {
+  if (!alive(run.supervisorPid)) return false;
+  const command = execFileSync("ps", ["-o", "command=", "-p", String(run.supervisorPid)], {
+    encoding: "utf8",
+  });
+  return command.includes(`serve ${run.id}`);
+}
+
 /** `--run <id>`, or the newest run whose supervisor is still alive. */
 function selectRun(): RunState {
   const id = argument("--run");
@@ -99,7 +109,7 @@ function selectRun(): RunState {
         .sort((a, b) => statSync(statePath(b)).mtimeMs - statSync(statePath(a)).mtimeMs)
         .map(readState)
     : [];
-  const live = runs.find((run) => alive(run.supervisorPid));
+  const live = runs.find(supervising);
   if (!live) throw new Error("No running verify stack. Start one with `pnpm verify:stack up`.");
   return live;
 }
@@ -150,16 +160,18 @@ const databaseName = (url: string) => new URL(url).pathname.slice(1);
 
 async function up() {
   const id = `${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}-${Math.random().toString(16).slice(2, 6)}`;
-  const dir = path.join(REPORTS, id);
-  await mkdir(dir, { recursive: true });
-  const log = openSync(path.join(dir, "stack.log"), "a");
-  const args = [...process.execArgv, process.argv[1]!, "serve", id];
   const pg = argument("--pg") ?? process.env.VERIFY_PG_URL;
-  if (pg) args.push("--pg", pg);
-  const supervisor = spawn(process.execPath, args, {
+  if (pg && !["127.0.0.1", "localhost", "[::1]"].includes(new URL(pg).hostname)) {
+    throw new Error("--pg must be a Postgres server on this machine (127.0.0.1 or localhost).");
+  }
+  const dir = path.join(REPORTS, id);
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  const log = openSync(path.join(dir, "stack.log"), "a");
+  const supervisor = spawn(process.execPath, [...process.execArgv, process.argv[1]!, "serve", id], {
     cwd: root,
     detached: true,
     stdio: ["ignore", log, log],
+    env: { ...process.env, VERIFY_PG_URL: pg ?? "" },
   });
   supervisor.unref();
   console.log(`Starting run ${id} (logs in ${path.relative(root, dir)})`);
@@ -189,95 +201,72 @@ async function up() {
 
 async function serve(id: string) {
   const dir = path.join(REPORTS, id);
-  const serverUrl = argument("--pg");
+  // From the environment, not argv, so a server password stays out of process listings.
+  const serverUrl = process.env.VERIFY_PG_URL;
   const [webPort, apiPort, supervisorPort] = await Promise.all([
     freePort(),
     freePort(),
     freePort(),
   ]);
   const dataDir = path.join(dir, "data");
-  const stops: Array<() => Promise<unknown>> = [];
-  let dev: ChildProcess | undefined;
-  let state: RunState | undefined;
-  let stopping = false;
-  const stopped = new AbortController();
-
-  const teardown = async (status: RunState["status"], error?: string) => {
-    if (stopping) return;
-    stopping = true;
-    if (dev?.pid) {
-      // pnpm and turbo give each server a process group of its own, so signal every process.
-      const tree = [dev.pid, ...descendants(dev.pid)];
-      signal(tree, "SIGTERM");
-      await pollUntil(() => !tree.some(alive), {
-        intervalMs: 250,
-        timeoutMs: 15_000,
-        onTimeout: () => false,
-      });
-      signal(tree.filter(alive), "SIGKILL");
-    }
-    for (const stop of stops.reverse()) {
-      await stop().catch((cause) => console.error("teardown step failed", cause));
-    }
-    await rm(dataDir, { recursive: true, force: true });
-    await rm(path.join(dir, ".rakazo-dev-branches"), { recursive: true, force: true });
-    if (state) await writeState({ ...state, status, ...(error ? { error } : {}) });
-    stopped.abort();
-  };
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => void teardown("stopped"));
+  // Each resource adds its release as soon as it exists; teardown runs them in reverse.
+  const releases: Array<() => Promise<unknown>> = [];
+  const stop = new AbortController();
+  for (const name of ["SIGINT", "SIGTERM"] as const) {
+    process.once(name, () => stop.abort(STOPPED));
   }
+  // Written before anything is acquired, so `down` can always find this run.
+  let state: RunState = {
+    id,
+    dir,
+    supervisorPid: process.pid,
+    head: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
+    webUrl: `http://127.0.0.1:${webPort}`,
+    apiUrl: `http://127.0.0.1:${apiPort}`,
+    account: ACCOUNT,
+    status: "starting",
+  };
+  await writeState(state);
 
+  let outcome: Pick<RunState, "status" | "error"> = { status: "stopped" };
   try {
     let migrationUrl: string;
+    let runtimeLogin = RUNTIME_LOGIN;
     if (serverUrl) {
       const name = `rakazo_verify_${id.replace(/\W/g, "_").toLowerCase()}`;
+      runtimeLogin = { user: name, password: RUNTIME_LOGIN.password };
       await query(serverUrl, `CREATE DATABASE "${name}"`);
-      // dev.mjs gives a branch with unmerged migrations its own copy, named after this one.
-      stops.push(async () => {
-        const rows = await query<{ datname: string }>(
-          serverUrl,
-          "SELECT datname FROM pg_database WHERE datname LIKE $1",
-          [`${name}%`],
-        );
-        for (const row of rows) {
-          await query(serverUrl, `DROP DATABASE IF EXISTS "${row.datname}" WITH (FORCE)`);
+      releases.push(async () => {
+        for (const database of await runDatabases(serverUrl, name)) {
+          await query(serverUrl, `DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
         }
+        await query(serverUrl, `DROP ROLE IF EXISTS "${name}"`);
       });
       migrationUrl = withDatabase(serverUrl, name);
     } else {
       // Always its own container: a CI_POSTGRES_URL server can be shared with other runs.
       delete process.env.CI_POSTGRES_URL;
-      const container = await startPostgres();
-      stops.push(() => container.stop());
+      const container = await startPostgres(stop.signal);
+      releases.push(() => container.stop());
       migrationUrl = container.getConnectionUri();
     }
-    const runtimeUrl = withDatabase(migrationUrl, databaseName(migrationUrl), RUNTIME_LOGIN);
-    const webUrl = `http://127.0.0.1:${webPort}`;
-    const apiUrl = `http://127.0.0.1:${apiPort}`;
-    state = {
-      id,
-      dir,
-      supervisorPid: process.pid,
-      head: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
-      webUrl,
-      apiUrl,
-      migrationUrl,
-      database: serverUrl ? { kind: "server", serverUrl } : { kind: "container" },
-      account: ACCOUNT,
-      status: "starting",
-    };
+    stop.signal.throwIfAborted();
+    state = { ...state, migrationUrl };
     await writeState(state);
 
     const env: NodeJS.ProcessEnv = {
-      ...benchmarkEnvironment({ databaseUrl: runtimeUrl, webPort, apiPort, dataDir }),
+      ...benchmarkEnvironment({
+        databaseUrl: withDatabase(migrationUrl, databaseName(migrationUrl), runtimeLogin),
+        webPort,
+        apiPort,
+        dataDir,
+        base: Object.fromEntries(INHERITED.map((name) => [name, process.env[name]])),
+      }),
       DATABASE_MIGRATION_URL: migrationUrl,
       NODE_ENV: "development",
       LOG_LEVEL: "info",
-      // Only this environment: a worktree's copied .env can hold real provider keys.
+      // Only this environment: a worktree's copied .env can hold real keys and public binds.
       RAKAZO_ENV_FILE: "none",
-      RAKAZO_DEV_RUN_WITH: "",
-      RAKAZO_DEV_TAILNET: "",
       API_HOST: "127.0.0.1",
       SUPERVISOR_PORT: String(supervisorPort),
       SANDBOX_SUPERVISOR_URL: `http://127.0.0.1:${supervisorPort}`,
@@ -285,42 +274,96 @@ async function serve(id: string) {
       PAYMENT_WALLET_PROVIDER: "emulator",
       VITE_DEFAULT_UI_LOCALE: "en",
     };
+    // dev.mjs may move the run to a branch copy, which realtime must follow; and jobs go through
+    // the real queue so the worker is exercised.
+    delete env.REALTIME_DATABASE_URL;
+    delete env.WAKEUP_DRIVER;
+    // dev.mjs reads `.env` itself for these, so they are set empty to win.
+    for (const name of ["RAKAZO_DEV_RUN_WITH", "RAKAZO_DEV_TAILNET", "RAKAZO_DEV_HOST"]) {
+      env[name] = "";
+    }
     const devLog = openSync(path.join(dir, "dev.log"), "a");
-    dev = spawnPnpm(["dev"], { cwd: root, env, stdio: ["ignore", devLog, devLog] });
+    const dev = spawnPnpm(["dev"], { cwd: root, env, stdio: ["ignore", devLog, devLog] });
+    if (dev.pid) {
+      const pid = dev.pid;
+      releases.push(() => stopTree(pid));
+    }
+    dev.once("exit", (code, signal) => {
+      stop.abort(new Error(`pnpm dev exited (${signal ?? code}); see dev.log`));
+    });
     state = { ...state, devPid: dev.pid };
     await writeState(state);
-    dev.once("exit", (code, signal) => {
-      void teardown("failed", `pnpm dev exited (${signal ?? code}); see dev.log`);
-    });
 
     await pollUntil(
-      async () => stopping || ((await answers(`${apiUrl}/health`)) && (await answers(webUrl))),
+      async () => (await answers(`${state.apiUrl}/health`)) && (await answers(state.webUrl)),
       {
         intervalMs: 1_000,
         timeoutMs: READY_TIMEOUT_MS,
+        signal: stop.signal,
         waitingFor: "the API and web servers",
       },
     );
-    if (stopping) return;
     // Through the web server, as the browser signs up, so the proxy and auth are proven too.
-    const signup = await fetch(`${webUrl}/api/auth/sign-up/email`, {
+    const signup = await fetch(`${state.webUrl}/api/auth/sign-up/email`, {
       method: "POST",
-      headers: { "content-type": "application/json", origin: webUrl },
+      headers: { "content-type": "application/json", origin: state.webUrl },
       body: JSON.stringify(ACCOUNT),
+      signal: stop.signal,
     });
     if (!signup.ok)
       throw new Error(`Seeding ${ACCOUNT.email} failed: ${signup.status} ${await signup.text()}`);
     state = { ...state, status: "ready" };
     await writeState(state);
-    console.log(`ready at ${webUrl}`);
+    console.log(`ready at ${state.webUrl}`);
+    if (!stop.signal.aborted) {
+      await new Promise((resolve) =>
+        stop.signal.addEventListener("abort", resolve, { once: true }),
+      );
+    }
+    if (stop.signal.reason !== STOPPED) throw stop.signal.reason;
   } catch (error) {
-    console.error(error);
-    await teardown("failed", error instanceof Error ? error.message : String(error));
+    if (stop.signal.reason !== STOPPED) {
+      console.error(error);
+      outcome = { status: "failed", error: error instanceof Error ? error.message : String(error) };
+    }
   }
-  if (!stopped.signal.aborted) {
-    await new Promise((resolve) => stopped.signal.addEventListener("abort", resolve));
+  for (const release of releases.reverse()) {
+    await release().catch((cause) => console.error("teardown step failed", cause));
   }
+  await rm(dataDir, { recursive: true, force: true });
+  await rm(path.join(dir, ".rakazo-dev-branches"), { recursive: true, force: true });
+  await writeState({ ...state, ...outcome });
   process.exit(0);
+}
+
+/** Stops `pid` and everything under it. pnpm and turbo give each server its own process group. */
+async function stopTree(pid: number) {
+  const tree = [pid, ...descendants(pid)];
+  signal(tree, "SIGTERM");
+  await pollUntil(() => !tree.some(alive), {
+    intervalMs: 250,
+    timeoutMs: 15_000,
+    onTimeout: () => false,
+  });
+  signal(tree.filter(alive), "SIGKILL");
+}
+
+/** The run's database and any branch copy dev.mjs made of it (named `<database>_<branch>_<hash>`). */
+async function runDatabases(url: string, name: string) {
+  const rows = await query<{ datname: string }>(
+    url,
+    "SELECT datname FROM pg_database WHERE datname = $1 OR left(datname, length($1) + 1) = $1 || '_'",
+    [name],
+  );
+  return rows.map((row) => row.datname);
+}
+
+/** The database the servers use: a branch copy when dev.mjs made one, else the run's own. */
+async function servedDatabaseUrl(run: RunState) {
+  if (!run.migrationUrl) throw new Error(`Run ${run.id} has no database yet`);
+  const name = databaseName(run.migrationUrl);
+  const copy = (await runDatabases(run.migrationUrl, name)).find((database) => database !== name);
+  return withDatabase(run.migrationUrl, copy ?? name);
 }
 
 async function doctor() {
@@ -329,7 +372,7 @@ async function doctor() {
   const check = (name: string, ok: boolean, detail?: string) => results.push([name, ok, detail]);
 
   check("run is ready", run.status === "ready", run.status);
-  check("supervisor is alive", alive(run.supervisorPid), `pid ${run.supervisorPid}`);
+  check("supervisor is alive", supervising(run), `pid ${run.supervisorPid}`);
   check("pnpm dev is alive", alive(run.devPid), `pid ${run.devPid}`);
   const ours = new Set(descendants(run.supervisorPid).map(String));
   for (const [label, url] of [
@@ -350,25 +393,14 @@ async function doctor() {
   const expected = readdirSync(path.join(root, "packages/db/prisma/migrations"), {
     withFileTypes: true,
   }).filter((entry) => entry.isDirectory()).length;
-  // dev.mjs moves a branch with unmerged migrations to a copy named after this run's database.
-  const databases = await query<{ datname: string }>(
-    run.migrationUrl,
-    "SELECT datname FROM pg_database WHERE datname LIKE $1",
-    [`${databaseName(run.migrationUrl)}%`],
-  );
-  const applied = await Promise.all(
-    databases.map(async ({ datname }) => {
-      const [row] = await query<{ count: string }>(
-        withDatabase(run.migrationUrl, datname),
-        "SELECT count(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL",
-      ).catch(() => [{ count: "0" }]);
-      return Number(row?.count ?? 0);
-    }),
+  const [applied] = await query<{ count: number }>(
+    await servedDatabaseUrl(run),
+    "SELECT count(*)::int AS count FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL",
   );
   check(
     "every migration in this checkout applied",
-    applied.includes(expected),
-    `${applied.join(",")} of ${expected}`,
+    applied?.count === expected,
+    `${applied?.count} of ${expected}`,
   );
   const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
   console.log(
@@ -426,7 +458,9 @@ async function drive(script: string | undefined) {
   if (!script)
     throw new Error("Usage: pnpm verify:stack drive <script.ts> [--run <id>] [--headed]");
   const run = selectRun();
-  if (run.status !== "ready") throw new Error(`Run ${run.id} is ${run.status}, not ready`);
+  if (run.status !== "ready" || !supervising(run)) {
+    throw new Error(`Run ${run.id} is not running and ready (${run.status})`);
+  }
   const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
   const dir = path.join(
     run.dir,
@@ -512,15 +546,22 @@ async function drive(script: string | undefined) {
 
 async function sql(text: string | undefined) {
   if (!text) throw new Error('Usage: pnpm verify:stack sql "<query>" [--run <id>]');
-  const run = selectRun();
-  const url = new URL(run.migrationUrl);
-  url.searchParams.set("options", "-c default_transaction_read_only=on");
-  console.log(JSON.stringify(await query(url.href, text), null, 2));
+  const pool = createPool(await servedDatabaseUrl(selectRun()));
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN READ ONLY");
+    // A named query is prepared, so Postgres takes exactly one statement.
+    console.log(JSON.stringify((await client.query({ name: "verify-sql", text })).rows, null, 2));
+  } finally {
+    await client.query("ROLLBACK");
+    client.release();
+    await pool.end();
+  }
 }
 
 async function down() {
   const run = selectRun();
-  if (alive(run.supervisorPid)) process.kill(run.supervisorPid, "SIGTERM");
+  if (supervising(run)) process.kill(run.supervisorPid, "SIGTERM");
   await pollUntil(() => !alive(run.supervisorPid), {
     intervalMs: 500,
     timeoutMs: 60_000,
