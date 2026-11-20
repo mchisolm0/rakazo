@@ -42,6 +42,24 @@ describePostgres("dictation words (PostgreSQL)", () => {
     return { userId, spaceId, name };
   }
 
+  /** Adds `userId` to the organization `spaceId` belongs to, which also adds them to its Space. */
+  async function joinSpace(spaceId: string, userId: string) {
+    const { organizationId } = await system.space.findUniqueOrThrow({
+      where: { id: spaceId },
+      select: { organizationId: true },
+    });
+    const now = new Date();
+    await system.member.create({
+      data: {
+        id: randomBytes(8).toString("hex"),
+        organizationId,
+        userId,
+        role: "member",
+        createdAt: now,
+      },
+    });
+  }
+
   /** A bot owned by `userId` in `spaceId`, whose chat holds one message with `text`. */
   async function botChat(spaceId: string, userId: string, name: string, text: string) {
     const bot = await system.bot.create({ data: { spaceId, userId, name, color: "blue" } });
@@ -55,6 +73,8 @@ describePostgres("dictation words (PostgreSQL)", () => {
     // The actor's own name is spelled like a bot's in lower case; the bot's spelling must win.
     const me = await person("Me", "platochat");
     const other = await person("Other");
+    const teammate = await person("Teammate", "Grace Hopper");
+    await joinSpace(me.spaceId, teammate.userId);
     await botChat(me.spaceId, me.userId, "Ada", "Merged https://example.com/me/rakazo/pull/1");
     await botChat(
       me.spaceId,
@@ -71,9 +91,9 @@ describePostgres("dictation words (PostgreSQL)", () => {
       spaceId: me.spaceId,
     } as Actor);
 
-    // The repository and the member take the bot's spelling; another person's names and links
-    // stay out.
-    expect(words).toHaveLength(3);
-    expect(words).toEqual(expect.arrayContaining(["rakazo", "PlatoChat", "Ada"]));
+    // The repository and the member take the bot's spelling, a teammate's name is in, and another
+    // person's names and links stay out.
+    expect(words).toHaveLength(4);
+    expect(words).toEqual(expect.arrayContaining(["rakazo", "PlatoChat", "Ada", "Grace Hopper"]));
   });
 });
