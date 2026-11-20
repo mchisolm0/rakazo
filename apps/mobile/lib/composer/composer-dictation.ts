@@ -180,7 +180,10 @@ export function useComposerDictation({
       // Names to listen for load while the person speaks; without them it still transcribes.
       const words = bestEffort(
         "load dictation words",
-        rpc("voice/words", undefined, { timeoutMs: WORDS_TIMEOUT_MS }),
+        rpc("voice/words", undefined, {
+          timeoutMs: WORDS_TIMEOUT_MS,
+          signal: mine.cancel.signal,
+        }),
       );
       const stopped = new AbortController();
       mine.finish = () => {

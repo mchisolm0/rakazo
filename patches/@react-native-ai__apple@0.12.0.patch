@@ -39,7 +39,7 @@ index c0f036ce7d9905cf7a54c80199e4d6039f64ef30..ea22c1cb3b8cdfdbed5af478a4165d43
                  auto jsResult = react::TurboModuleConvertUtils::convertObjCObjectToJSIValue(rt, result);
                  resolveFunc.call(rt, jsResult);
 diff --git a/ios/transcription/AppleTranscriptionImpl.swift b/ios/transcription/AppleTranscriptionImpl.swift
-index 188371a5f55fadae19187108c4a688569d0223e3..6e9670730321b6d61c86a33f38102571216b4816 100644
+index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f59df018bc 100644
 --- a/ios/transcription/AppleTranscriptionImpl.swift
 +++ b/ios/transcription/AppleTranscriptionImpl.swift
 @@ -12,6 +12,11 @@ import UniformTypeIdentifiers
@@ -130,7 +130,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..6e9670730321b6d61c86a33f38102571
      if #available(iOS 26, *) {
        let tempDirectory = FileManager.default.temporaryDirectory
        let fileName = UUID().uuidString
-@@ -83,62 +114,127 @@ public class AppleTranscriptionImpl: NSObject {
+@@ -83,62 +114,128 @@ public class AppleTranscriptionImpl: NSObject {
        do {
          try audioData.write(to: fileURL)
          
@@ -223,7 +223,8 @@ index 188371a5f55fadae19187108c4a688569d0223e3..6e9670730321b6d61c86a33f38102571
 +              }
 +
 +              var (collected, runs) = try await collectorTask.value
-+              if let dictated = try await dictatedTask?.value {
++              // Taught words only refine the transcript; a failed dictation pass keeps it as heard.
++              if let dictated = try? await dictatedTask?.value {
 +                runs = TaughtWords.apply(to: runs, dictated: dictated, taught: words)
 +                for index in collected.indices {
 +                  let text = runs.filter { $0.segment == index }.map(\.text).joined()
@@ -294,10 +295,10 @@ index 188371a5f55fadae19187108c4a688569d0223e3..6e9670730321b6d61c86a33f38102571
 +}
 diff --git a/ios/transcription/TaughtWords.swift b/ios/transcription/TaughtWords.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..a16466c71fc6a27535a070f65aac33f972f84703
+index 0000000000000000000000000000000000000000..aef0e79650822c630b5d2afe56960bf49fb3586c
 --- /dev/null
 +++ b/ios/transcription/TaughtWords.swift
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,106 @@
 +import Foundation
 +
 +/// One run of transcribed text and the audio it was heard in. Runs without a time range
@@ -319,10 +320,8 @@ index 0000000000000000000000000000000000000000..a16466c71fc6a27535a070f65aac33f9
 +  static let minimumSimilarity = 0.4
 +
 +  static func apply(to runs: [HeardRun], dictated: [HeardRun], taught: [String]) -> [HeardRun] {
-+    let byKey = Dictionary(taught.map { (key($0), $0) }, uniquingKeysWith: { first, _ in first })
 +    var out = runs
-+    for heard in dictated {
-+      guard let word = byKey[key(heard.text)] else { continue }
++    for heard in taughtWordsHeard(in: dictated, taught: taught) {
 +      // Timing narrows the place; spelling picks the runs within it, so a neighbour the
 +      // dictation range swallowed stays.
 +      let hits = out.indices.filter {
@@ -333,18 +332,22 @@ index 0000000000000000000000000000000000000000..a16466c71fc6a27535a070f65aac33f9
 +      var best: (first: Int, last: Int, score: Double)?
 +      for first in hits {
 +        for last in hits where last >= first {
-+          let score = similarity(key(out[first...last].map(\.text).joined()), key(word))
++          let score = similarity(key(out[first...last].map(\.text).joined()), key(heard.text))
 +          if score > (best?.score ?? -1) { best = (first, last, score) }
 +        }
 +      }
 +      guard let best, best.score >= minimumSimilarity else { continue }
-+      let lead = out[best.first].text.prefix { $0.isWhitespace }
 +      let tail = out[best.last].text.reversed().prefix { $0.isPunctuation }.reversed()
++      let current = out[best.first...best.last].map(\.text).joined()
++        .trimmingCharacters(in: .whitespaces).dropLast(tail.count)
++      // A taught word that is also an ordinary one ("Will") keeps the long-form casing.
++      if current.lowercased() == heard.text.lowercased() { continue }
++      let lead = out[best.first].text.prefix { $0.isWhitespace }
 +      out.replaceSubrange(
 +        best.first...best.last,
 +        with: [
 +          HeardRun(
-+            text: lead + word + String(tail),
++            text: lead + heard.text + String(tail),
 +            start: out[best.first].start,
 +            end: out[best.last].end,
 +            segment: out[best.first].segment
@@ -353,6 +356,29 @@ index 0000000000000000000000000000000000000000..a16466c71fc6a27535a070f65aac33f9
 +      )
 +    }
 +    return out
++  }
++
++  /// Each taught word or phrase the dictation model heard, with the audio it spans. A phrase
++  /// such as a full name can arrive as one run per word, so the longest match wins.
++  static func taughtWordsHeard(in dictated: [HeardRun], taught: [String]) -> [HeardRun] {
++    let byKey = Dictionary(taught.map { (key($0), $0) }, uniquingKeysWith: { first, _ in first })
++    let longest = taught.map { $0.split(whereSeparator: \.isWhitespace).count }.max() ?? 1
++    let timed = dictated.filter { $0.start >= 0 && !key($0.text).isEmpty }
++    var found: [HeardRun] = []
++    var index = 0
++    while index < timed.count {
++      var length = min(longest, timed.count - index)
++      while length > 0 {
++        let span = timed[index..<index + length]
++        if let word = byKey[key(span.map(\.text).joined())] {
++          found.append(HeardRun(text: word, start: span.first!.start, end: span.last!.end, segment: 0))
++          break
++        }
++        length -= 1
++      }
++      index += max(length, 1)
++    }
++    return found
 +  }
 +
 +  /// Letters and digits only, lowercased: "GH Dash", "gh-dash" and "ghdash" are one key.

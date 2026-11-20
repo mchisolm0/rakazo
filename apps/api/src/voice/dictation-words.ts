@@ -5,8 +5,10 @@ import { GUEST_ROLE, homeOrganizationId, runAsSystem, storedMessageBlocks } from
 
 /** The phone's recognizer is tuned for a short list; past this, later names stop helping. */
 const MAX_WORDS = 100;
-/** Enough history to see which repositories come up week to week, without a long read. */
-const RECENT_MESSAGES = 200;
+/** The newest chats and their latest messages: enough to see which repositories keep coming up,
+ * read through the (threadId, seq) index so a long history never makes dictation slow. */
+const RECENT_THREADS = 30;
+const MESSAGES_PER_THREAD = 10;
 const MAX_REPOSITORIES = 40;
 
 /**
@@ -16,7 +18,7 @@ const MAX_REPOSITORIES = 40;
 const REPOSITORY_PATH =
   /^\/[\w.-]+\/([\w.-]+?)(?:\.git)?\/(?:pull|pulls|issues|tree|blob|commit|commits|compare|releases|actions|wiki)(?:\/|$)/;
 /** The `owner/name#123` shorthand for an issue or pull request. */
-const REPOSITORY_REFERENCE = /(?:^|[\s(])[\w.-]+\/([\w.-]+)#\d+\b/g;
+const REPOSITORY_REFERENCE = /(?:^|[\s([`])[\w.-]+\/([\w.-]+)#\d+\b/g;
 
 /** Repository names the texts link to or cite, most mentioned first. */
 export function repositoryNames(texts: readonly string[]): string[] {
@@ -38,7 +40,7 @@ export function repositoryNames(texts: readonly string[]): string[] {
 }
 
 /**
- * Names the phone's recognizer should listen for when this member dictates: their bots, the
+ * Names the phone's recognizer should listen for when this member dictates: their own bots, the
  * people in their Spaces, and the repositories their own chats keep linking to.
  */
 export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<string[]> {
@@ -49,22 +51,34 @@ export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<stri
       select: { spaceId: true },
     });
     const spaceIds = memberships.map((membership) => membership.spaceId);
-    const [bots, members, messages] = await Promise.all([
+    const [bots, members, threads] = await Promise.all([
       prisma.bot.findMany({
-        where: { spaceId: { in: spaceIds }, archivedAt: null },
+        where: { spaceId: { in: spaceIds }, userId: actor.userId, archivedAt: null },
         select: { name: true },
       }),
       prisma.spaceMember.findMany({
         where: { spaceId: { in: spaceIds } },
         select: { member: { select: { user: { select: { name: true } } } } },
       }),
-      prisma.message.findMany({
-        where: { thread: { spaceId: { in: spaceIds }, userId: actor.userId } },
+      prisma.thread.findMany({
+        where: { spaceId: { in: spaceIds }, userId: actor.userId },
         orderBy: { createdAt: "desc" },
-        take: RECENT_MESSAGES,
-        select: { id: true, blocks: true },
+        take: RECENT_THREADS,
+        select: { id: true },
       }),
     ]);
+    const messages = (
+      await Promise.all(
+        threads.map((thread) =>
+          prisma.message.findMany({
+            where: { threadId: thread.id },
+            orderBy: { seq: "desc" },
+            take: MESSAGES_PER_THREAD,
+            select: { id: true, blocks: true },
+          }),
+        ),
+      )
+    ).flat();
     const texts = messages.flatMap((message) =>
       storedMessageBlocks(message).flatMap((block) => (block.kind === "text" ? [block.text] : [])),
     );
