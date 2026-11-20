@@ -315,10 +315,10 @@ index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968c
 +}
 diff --git a/ios/transcription/TaughtWords.swift b/ios/transcription/TaughtWords.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..dcd5bbe913f77abadd325c518fc147a5169db7d6
+index 0000000000000000000000000000000000000000..8fb95e77c7f0be648e8f2799f9310d5999f76048
 --- /dev/null
 +++ b/ios/transcription/TaughtWords.swift
-@@ -0,0 +1,108 @@
+@@ -0,0 +1,123 @@
 +import Foundation
 +
 +/// One run of transcribed text and the audio it was heard in. Runs without a time range
@@ -357,18 +357,26 @@ index 0000000000000000000000000000000000000000..dcd5bbe913f77abadd325c518fc147a5
 +        }
 +      }
 +      guard let best, best.score >= minimumSimilarity else { continue }
-+      // Spacing and punctuation around the matched words, such as "(" and ")", stay as heard.
++      // Spacing and punctuation around the matched words, such as "(" and ", ", stay as heard;
++      // punctuation the taught word itself starts or ends with (".github") belongs to it.
++      let word = heard.text
 +      let joined = out[best.first...best.last].map(\.text).joined()
-+      let lead = joined.prefix { $0.isWhitespace || $0.isPunctuation }
-+      let tail = joined.dropFirst(lead.count).reversed().prefix { $0.isPunctuation }.reversed()
-+      let current = joined.dropFirst(lead.count).dropLast(tail.count)
-+      // A taught word that is also an ordinary one ("Will") keeps the long-form casing.
-+      if current.lowercased() == heard.text.lowercased() { continue }
++      var lead = joined.prefix { $0.isWhitespace || $0.isPunctuation }
++      if word.hasPrefix(lead.drop { $0.isWhitespace }) { lead = lead.prefix { $0.isWhitespace } }
++      let rest = joined.dropFirst(lead.count)
++      var tail = Substring(rest.reversed().prefix { $0.isWhitespace || $0.isPunctuation }.reversed())
++      let tailMarks = tail.prefix { !$0.isWhitespace }
++      if !tailMarks.isEmpty && word.hasSuffix(tailMarks) { tail = tail.dropFirst(tailMarks.count) }
++      let current = rest.dropLast(tail.count)
++      if current == word { continue }
++      // A plain taught word that is also ordinary speech ("Will", "every day") keeps the long-form
++      // casing and spacing; only a styled name ("PlatoChat", "gh-dash") restyles the same letters.
++      if key(String(current)) == key(word) && !isStyled(word) { continue }
 +      out.replaceSubrange(
 +        best.first...best.last,
 +        with: [
 +          HeardRun(
-+            text: lead + heard.text + String(tail),
++            text: lead + word + tail,
 +            start: out[best.first].start,
 +            end: out[best.last].end,
 +            segment: out[best.first].segment
@@ -401,6 +409,13 @@ index 0000000000000000000000000000000000000000..dcd5bbe913f77abadd325c518fc147a5
 +      index += max(length, 1)
 +    }
 +    return found
++  }
++
++  /// Written in a way speech alone does not give: punctuation, or a capital inside the word.
++  static func isStyled(_ word: String) -> Bool {
++    let characters = Array(word)
++    return characters.contains { $0.isPunctuation }
++      || zip(characters, characters.dropFirst()).contains { $0.isLowercase && $1.isUppercase }
 +  }
 +
 +  /// Letters and digits only, lowercased: "GH Dash", "gh-dash" and "ghdash" are one key.
