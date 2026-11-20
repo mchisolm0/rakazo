@@ -71,6 +71,7 @@ export function useThreadRows({
   rowActions,
   botId,
   groupId,
+  topicId,
   inGroup,
   readOnly,
   onCall,
@@ -92,6 +93,8 @@ export function useThreadRows({
   rowActions: MessageRowActions;
   botId?: string;
   groupId?: string;
+  /** Set on a topic's screen: its cards answer and stop in the topic, not the bot's chat. */
+  topicId?: string;
   inGroup: boolean;
   readOnly: boolean;
   onCall: boolean;
@@ -166,6 +169,7 @@ export function useThreadRows({
           botId={botId}
           bubbleBotId={botId ?? snap?.members?.[0]?.botId ?? ""}
           groupId={groupId}
+          topicId={topicId}
           botName={displayName}
           showBotSenderName={showBotSenderName}
           bots={mentionBots}
@@ -220,6 +224,7 @@ export function useThreadRows({
       inGroup,
       botId,
       groupId,
+      topicId,
       currentBot,
       currentBotStatus,
       userBubble,

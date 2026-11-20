@@ -61,6 +61,16 @@ export function useRightPanel({
     setRestoredPanelKey(destKey);
   }
 
+  /** Opens a topic in another bot's chat, as an alert for it does. */
+  function openTopicInChat(
+    destKey: string | null,
+    target: { botId: string; topicId: string },
+    navigateToChat: () => void,
+  ) {
+    setTopic(target);
+    openPanelInChat(destKey, "thread", navigateToChat);
+  }
+
   return {
     panel,
     setPanel,
@@ -68,6 +78,7 @@ export function useRightPanel({
     openPanelInChat,
     topic,
     openTopic,
+    openTopicInChat,
     modelFocusRequest,
     setModelFocusRequest,
     restoredPanelKey,

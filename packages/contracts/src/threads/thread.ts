@@ -14,6 +14,8 @@ export const ChatAlertSchema = z.object({
   botId: Id,
   threadId: Id,
   groupId: Id.optional(),
+  /** Set when the run was in a topic of the bot's chat; equals threadId. */
+  topicId: Id.optional(),
 });
 export type ChatAlert = z.infer<typeof ChatAlertSchema>;
 

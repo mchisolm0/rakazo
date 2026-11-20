@@ -462,7 +462,15 @@ function SpaceShell() {
       activeGroupId,
       openChat: (alert) => {
         setMobileSidebarOpen(false);
-        navigate(alert.groupId ? `/app/g/${alert.groupId}` : `/app/${alert.botId}`);
+        const path = alert.groupId ? `/app/g/${alert.groupId}` : `/app/${alert.botId}`;
+        if (!alert.topicId || alert.groupId) return navigate(path);
+        const destKey =
+          userId && bootstrapMe?.spaceId
+            ? rightPanelStorageKey(userId, bootstrapMe.spaceId, "bot", alert.botId)
+            : null;
+        rightPanel.openTopicInChat(destKey, { botId: alert.botId, topicId: alert.topicId }, () =>
+          navigate(path),
+        );
       },
       meId: userId,
       groupsRef,

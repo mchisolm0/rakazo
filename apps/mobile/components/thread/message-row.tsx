@@ -85,6 +85,7 @@ type MessageRowProps = {
   botId?: string;
   bubbleBotId: string;
   groupId?: string;
+  topicId?: string;
   botName?: string;
   showBotSenderName: boolean;
   bots: MobileBot[];
@@ -129,6 +130,7 @@ export const MessageRow = memo(function MessageRow({
   botId,
   bubbleBotId,
   groupId,
+  topicId,
   botName,
   showBotSenderName,
   bots,
@@ -478,6 +480,7 @@ export const MessageRow = memo(function MessageRow({
                 mentions={mentions}
                 botId={bubbleBotId}
                 groupId={groupId}
+                topicId={topicId}
                 message={message}
                 authorName={authorName}
                 botName={botName}

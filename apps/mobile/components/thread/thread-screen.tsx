@@ -536,6 +536,7 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
     rowActions,
     botId,
     groupId,
+    topicId,
     inGroup,
     readOnly,
     onCall,

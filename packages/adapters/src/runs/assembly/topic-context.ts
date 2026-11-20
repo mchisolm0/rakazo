@@ -22,7 +22,7 @@ export async function loadTopicRootContext(
 }
 
 /**
- * For a run in a bot's own chat: the open threads whose replies came after `since`, each with
+ * For a run in a bot's own chat: the threads with replies after `since`, open or done, each with
  * its newest message in brief. Their replies never enter the chat's history, so this is how the
  * chat hears about them.
  */
@@ -32,9 +32,7 @@ export async function loadTopicActivityContext(
 ): Promise<string | undefined> {
   const since = input.since?.toISOString() ?? "";
   const changed = (await listTopics(prisma, input))
-    .filter(
-      (topic) => topic.settledBy === null && topic.replyCount > 0 && topic.lastActivityAt > since,
-    )
+    .filter((topic) => topic.replyCount > 0 && topic.lastActivityAt > since)
     .slice(0, ACTIVITY_LIMIT);
   if (!changed.length) return undefined;
   const latest = await Promise.all(
@@ -53,6 +51,7 @@ export async function loadTopicActivityContext(
       return {
         title: topic.title,
         replyCount: topic.replyCount,
+        done: topic.settledBy !== null,
         latest: truncatePlainText(plainTextFromMarkdown(text), LATEST_EXCERPT_LIMIT),
       };
     }),

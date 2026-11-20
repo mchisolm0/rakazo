@@ -27,7 +27,7 @@ type ChatAlertOptions = {
   rpc: Pick<RpcClient, "notifications">;
   activeBotId: RefObject<string | undefined>;
   activeGroupId: RefObject<string | undefined>;
-  openChat: (chat: Pick<ChatAlert, "botId" | "groupId">) => void;
+  openChat: (chat: Pick<ChatAlert, "botId" | "groupId" | "topicId">) => void;
   /** The signed-in person, whose own messages never notify them. */
   meId: string | undefined;
   /** Current groups, so a snooze that lands after a reply was queued is still honored. */

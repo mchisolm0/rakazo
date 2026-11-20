@@ -320,6 +320,10 @@ export function threadsRoutes(ctx: RouterContext) {
       }),
       clear: authed.threads.clear.handler(async ({ context, input }) => {
         const target = await resolveThreadTarget(deps.prisma, context.actor, input);
+        // A topic goes with its message; clearing applies to whole chats.
+        if (target.kind === "bot" && target.topicId) {
+          throw new ClientError("BAD_REQUEST", "Clear the chat instead of one thread");
+        }
         const contextBotId = target.kind === "bot" ? target.botId : target.memberBotIds[0];
         if (!contextBotId) throw new IsolationError();
         const { cancelledRunIds, historyCompactionGeneration, removedStorageKeys } =

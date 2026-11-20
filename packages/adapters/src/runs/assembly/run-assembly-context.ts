@@ -372,8 +372,9 @@ export async function buildTurnPrompt(
     : undefined;
   const readsHistory = parts.records.historyReach !== "none";
   // Per turn, after the history: the chat hears what moved in its threads without their replies.
+  // Only the owner's own chat turns: a routine or a channel reads just what its history rules allow.
   const topicActivity =
-    readsHistory && thread.botId
+    readsHistory && thread.botId && !nonOwnerChatRun && run.trigger !== "routine"
       ? await bestEffort(
           "summarize thread activity for the chat",
           loadTopicActivityContext(deps.prisma, {
