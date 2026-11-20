@@ -225,10 +225,11 @@ export const MessageBlock = z.discriminatedUnion("kind", [
    */
   z.object({ kind: z.literal("delivery") }),
   /**
-   * Marks a bot message an outside service posted through the bot's webhook. The model reads
-   * the message as untrusted data, never as its own words.
+   * Words an outside service posted through the bot's webhook. They sit in `markdown`, not
+   * `text`, because nothing that builds the model's context or search reads this field: the bot
+   * did not write them, and they must never pass for its own reply.
    */
-  z.object({ kind: z.literal("webhook_post") }),
+  z.object({ kind: z.literal("post"), markdown: z.string() }),
   z.object({
     kind: z.literal("progress"),
     text: z.string(),

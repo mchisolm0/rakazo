@@ -405,7 +405,7 @@ describe("thread cards", () => {
 
   it("opens a link button's URL under the post's text", () => {
     renderBlocks([
-      text("Deploy finished"),
+      { kind: "post", markdown: "Deploy finished" },
       { kind: "buttons", buttons: [{ label: "Open in T3", url: "t3code://threads/env/thread" }] },
     ]);
     expect(container.textContent).toContain("Deploy finished");

@@ -9,7 +9,6 @@ import {
 } from "@rakazo/contracts";
 import { sliceWellFormed } from "../primitives/utf8.js";
 import { isApprovalAskBlock, isSecretAskBlock } from "../runs/action-approval.js";
-import { webhookPostHistoryText } from "./webhook-post.prompt.js";
 
 export class AttachmentValidationError extends Error {
   constructor(message: string) {
@@ -221,10 +220,7 @@ export function toolStepOutcomeText(step: { count: number; outcomes?: unknown })
 }
 
 export function blocksToAgentHistoryText(blocks: MessageBlock[]): string {
-  const text = blocks.map(blockHistoryText).filter(Boolean).join("\n");
-  return blocks.some((block) => block.kind === "webhook_post")
-    ? webhookPostHistoryText(text)
-    : text;
+  return blocks.map(blockHistoryText).filter(Boolean).join("\n");
 }
 
 /** A reply in order, with its tool steps apart from the text around them. */

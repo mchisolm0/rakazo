@@ -196,8 +196,9 @@ function replyBlockText(block: MessageBlock): string {
     case "file":
       return block.name || blocksToAgentHistoryText([block]);
     case "delivery":
-    case "webhook_post":
       return "";
+    case "post":
+      return block.markdown;
   }
 }
 

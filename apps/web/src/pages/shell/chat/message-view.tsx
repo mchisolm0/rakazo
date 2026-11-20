@@ -10,7 +10,7 @@ import type {
   ThreadMessage,
 } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
-import { isPeerReceiptBlocks, isToolActivityBlock, otherAuthor } from "@rakazo/core";
+import { isPeerReceiptBlocks, isToolActivityBlock, otherAuthor, withPostText } from "@rakazo/core";
 import { BotAvatar, Button, cn, resolvePersonaColorDef } from "@rakazo/ui-web";
 import { UserRound } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
@@ -63,7 +63,7 @@ export const MessageView = memo(function MessageView({
   canAnswer,
   separateAnswers,
   canDismiss,
-  message,
+  message: shown,
   meId,
   mentions,
   pages,
@@ -153,6 +153,7 @@ export const MessageView = memo(function MessageView({
   markedUnread?: boolean;
   onReact?: (message: ThreadMessage, reaction: MessageReaction) => Promise<void>;
 }) {
+  const message = useMemo(() => withPostText(shown), [shown]);
   const { t } = useLingui();
   const isNarration =
     message.role === "bot" &&

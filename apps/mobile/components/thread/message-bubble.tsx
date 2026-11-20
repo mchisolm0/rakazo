@@ -11,6 +11,7 @@ import {
   messagingProviderLabel,
   resolveAskChoice,
   selectedAskActionLabel,
+  withPostText,
 } from "@rakazo/core";
 import { fontWeight, typeScale } from "@rakazo/ui-tokens";
 import type { ComponentProps } from "react";
@@ -94,10 +95,13 @@ export type MessageActionProps = Pick<
 
 export const MessageBubble = memo(function MessageBubble({
   mentions,
-  ...props
+  message: shown,
+  ...rest
 }: ComponentProps<typeof MessageBubbleContent> & {
   mentions?: readonly ChildBotBlock[];
 }) {
+  const message = useMemo(() => withPostText(shown), [shown]);
+  const props = { ...rest, message };
   const { members, onOpenBot } = props;
   const userMentions = useMemo(
     () =>
