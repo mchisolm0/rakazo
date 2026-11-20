@@ -4,6 +4,7 @@ import type { Bot, LoginFieldInput, ThreadMessage, TopicSummary } from "@rakazo/
 import {
   activeThreadRuns,
   answerableAskMessageIds,
+  chatUserBubbleColors,
   dismissableAskMessageIds,
   isActive,
   isRunWorking,
@@ -13,10 +14,9 @@ import {
   projectMessageReactions,
   separateAskAnswers,
 } from "@rakazo/core";
-import { bestEffort } from "@rakazo/logging";
 import { Button, cn, SectionHeading, Textarea } from "@rakazo/ui-web";
 import { ArrowUp, Square, X } from "lucide-react";
-import type { ComponentProps, KeyboardEvent, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, KeyboardEvent, ReactNode } from "react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ActiveBotGlyph } from "../../../components/ai/CollaborationMarker";
 import { messageHasVisibleBlocks } from "../../../lib/chat/tool-activity-view";
@@ -69,6 +69,7 @@ export function ThreadPanel({
   onClose: () => void;
 }) {
   const { t } = useLingui();
+  const userBubble = useMemo(() => chatUserBubbleColors(bot.color, bot.id), [bot.color, bot.id]);
   const { snapshot, target, refresh } = useTopicThread({
     rpc,
     queries,
@@ -125,7 +126,7 @@ export function ThreadPanel({
         ...(dismiss ? { dismiss: true as const } : {}),
       });
       // The answer is saved; the live stream catches up a failed read.
-      await bestEffort("read the thread after an answer", refresh());
+      await refresh().catch(() => undefined);
     },
     [rpc, target],
   );
@@ -171,7 +172,19 @@ export function ThreadPanel({
   };
 
   return (
-    <div data-testid="thread-panel" className="flex h-full w-full flex-col">
+    <div
+      data-testid="thread-panel"
+      className="flex h-full w-full flex-col"
+      // The bot's colors on the person's own bubbles, as in its chat.
+      style={
+        userBubble
+          ? ({
+              "--chat-user": userBubble.background,
+              "--chat-user-foreground": userBubble.foreground,
+            } as CSSProperties)
+          : undefined
+      }
+    >
       <div className="flex items-center gap-1 px-5 pt-[17px] pb-2">
         <SectionHeading as="h2" className="me-auto">
           <Trans>Thread</Trans>

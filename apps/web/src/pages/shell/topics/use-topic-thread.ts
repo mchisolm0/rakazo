@@ -6,7 +6,6 @@ import {
   runThreadSubscription,
 } from "@rakazo/core";
 import { fetchFresh } from "@rakazo/core/query";
-import { bestEffort } from "@rakazo/logging";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import type { SpaceQueries } from "../../../lib/query/query";
@@ -37,12 +36,11 @@ export function useTopicThread({
   const markRead = useRef(() => {});
   markRead.current = () => {
     if (document.visibilityState !== "visible" || !document.hasFocus()) return;
-    void bestEffort(
-      "mark the open thread read",
-      rpc.threads
-        .markRead(target)
-        .then(() => queryClient.invalidateQueries({ queryKey: topicsKey })),
-    );
+    // The RPC client reports a failed request; the next open or focus marks it read again.
+    void rpc.threads
+      .markRead(target)
+      .then(() => queryClient.invalidateQueries({ queryKey: topicsKey }))
+      .catch(() => undefined);
   };
   useEventListener(window, "focus", () => markRead.current());
 
@@ -74,7 +72,8 @@ export function useTopicThread({
         }
         // waiting_input: an ask card's answerable state comes with the snapshot.
         if (isRunTerminalEvent(event) || event.type === "run.waiting_input") {
-          void bestEffort("refresh the open thread", coalesced.invalidate());
+          // A failed read is reported by the RPC client; the next event reads again.
+          void coalesced.invalidate().catch(() => undefined);
         }
       },
     });
