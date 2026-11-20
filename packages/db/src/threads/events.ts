@@ -317,10 +317,17 @@ export async function clearThread(
       select: { nextMessageSeq: true, historyCompactionGeneration: true, userId: true },
     });
     await clearThreadReads(tx, input.threadId);
+    // Topics hang off the chat's messages and go with them, so their runs stop here too.
+    const topicThreadIds = (
+      await tx.thread.findMany({
+        where: { spaceId: input.spaceId, parentMessage: { threadId: input.threadId } },
+        select: { id: true },
+      })
+    ).map((topic) => topic.id);
     const activeRuns = await tx.run.findMany({
       where: {
         spaceId: input.spaceId,
-        ...conversationRunsWhere(input.threadId),
+        OR: [conversationRunsWhere(input.threadId), { threadId: { in: topicThreadIds } }],
         status: { in: ["queued", "leased", "running", "waiting_input", "waiting_takeover"] },
       },
       select: { id: true, taskId: true, userId: true, spaceId: true },
@@ -348,7 +355,12 @@ export async function clearThread(
       select: { id: true },
     });
     const helperThreadIds = helperThreads.map((thread) => thread.id);
-    const cleared = { OR: [{ threadId: input.threadId }, { threadId: { in: helperThreadIds } }] };
+    const cleared = {
+      OR: [
+        { threadId: input.threadId },
+        { threadId: { in: [...helperThreadIds, ...topicThreadIds] } },
+      ],
+    };
     // A reply's kept screenshots belong to its messages, so they go with them.
     const clearedRuns = await tx.message.findMany({
       where: { ...cleared, runId: { not: null } },

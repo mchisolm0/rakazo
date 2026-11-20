@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PrismaClient } from "../database/client.js";
 import { createDb } from "../database/client.js";
-import { asSystem, runAsTenant } from "../database/row-security.js";
+import { asSystem, runAsSystem, runAsTenant } from "../database/row-security.js";
+import { pruneChatHistory } from "../history/history-retention.js";
+import { clearThread } from "./events.js";
 import { createThreadMessage } from "./messages.js";
 import { markThreadReadFor } from "./thread-reads.js";
 import { findTopic, listTopics, openTopic, postTopicItem, settleTopic } from "./topics.js";
@@ -198,5 +200,76 @@ describePostgres("topics in a bot chat (PostgreSQL)", () => {
     expect((await topics(soon)).find((topic) => topic.id === topicId)?.settledBy).toBeNull();
     const weekOn = new Date(reopenedAt.getTime() + 7 * DAY);
     expect((await topics(weekOn)).find((topic) => topic.id === topicId)?.settledBy).toBe("idle");
+  });
+
+  it("keeps an old message while its topic still has recent replies", async () => {
+    const system = asSystem(prisma);
+    const old = await system.bot.create({
+      data: {
+        spaceId: space,
+        userId: ada,
+        name: "Archive",
+        color: "gray",
+        thread: { create: { spaceId: space, userId: ada } },
+      },
+      include: { thread: true },
+    });
+    const root = await as(() =>
+      createThreadMessage(prisma, {
+        threadId: old.thread!.id,
+        role: "bot",
+        botId: old.id,
+        blocks: [{ kind: "text", text: "Quarterly report" }],
+      }),
+    );
+    await system.message.update({
+      where: { id: root.id },
+      data: { createdAt: new Date(Date.now() - 40 * DAY) },
+    });
+    const topicId = await as(() =>
+      openTopic(prisma, { mainThreadId: old.thread!.id, messageId: root.id }),
+    );
+    await as(() =>
+      createThreadMessage(prisma, {
+        threadId: topicId!,
+        role: "user",
+        authorUserId: ada,
+        blocks: [{ kind: "text", text: "Any update on this?" }],
+      }),
+    );
+    await runAsSystem("test prune", () => pruneChatHistory(system, 30));
+    expect(await system.message.findUnique({ where: { id: root.id } })).not.toBeNull();
+    expect(await system.thread.findUnique({ where: { id: topicId! } })).not.toBeNull();
+  });
+
+  it("clearing the chat stops runs working in its topics", async () => {
+    const system = asSystem(prisma);
+    const [topic] = await topics();
+    const task = await system.task.create({
+      data: {
+        spaceId: space,
+        botId,
+        threadId: topic!.id,
+        userId: ada,
+        prompt: "",
+        status: "running",
+      },
+    });
+    const working = await system.run.create({
+      data: {
+        spaceId: space,
+        botId,
+        threadId: topic!.id,
+        taskId: task.id,
+        userId: ada,
+        status: "running",
+        trigger: "user",
+      },
+    });
+    const cleared = await as(() =>
+      clearThread(prisma, { spaceId: space, threadId: chatId, botId }),
+    );
+    expect(cleared.cancelledRunIds).toContain(working.id);
+    expect(await system.thread.findUnique({ where: { id: topic!.id } })).toBeNull();
   });
 });

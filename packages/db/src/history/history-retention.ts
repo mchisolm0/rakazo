@@ -70,9 +70,26 @@ async function pruneThreadChunk(
         orderBy: { message: { seq: "asc" } },
         select: { message: { select: { seq: true } } },
       });
+      // A message's topic goes with it, so one whose topic is still in use is kept, with all after.
+      const liveTopicRoot = await tx.message.findFirst({
+        where: {
+          threadId,
+          topic: {
+            is: {
+              OR: [
+                { messages: { some: { createdAt: { gte: cutoff } } } },
+                { runs: { some: { status: { in: [...ACTIVE_RUN_STATUSES] } } } },
+              ],
+            },
+          },
+        },
+        orderBy: { seq: "asc" },
+        select: { seq: true },
+      });
       const stopAt = Math.min(
         firstKept?.seq ?? Number.POSITIVE_INFINITY,
         waiting?.message.seq ?? Number.POSITIVE_INFINITY,
+        liveTopicRoot?.seq ?? Number.POSITIVE_INFINITY,
       );
       const due = await tx.message.findMany({
         where: { threadId, ...(Number.isFinite(stopAt) ? { seq: { lt: stopAt } } : {}) },
