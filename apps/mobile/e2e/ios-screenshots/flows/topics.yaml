@@ -22,7 +22,7 @@ name: Threads
 - takeScreenshot: 02-threads
 - openLink: "rakazo:///topic?botId=${RAKAZO_SCREENSHOT_BOT_ID}&topicId=${RAKAZO_SCREENSHOT_TOPIC_ID}&name=Researcher"
 - extendedWaitUntil:
-    visible: ".*Added two pricing quotes.*"
+    visible: ".*Can you add the pricing quotes too.*"
     timeout: 20000
 - waitForAnimationToEnd:
     timeout: 3000
