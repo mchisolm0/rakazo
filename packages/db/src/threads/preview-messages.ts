@@ -58,3 +58,31 @@ export async function withNewestThreadMessages<T extends { thread: { id: string 
       : null,
   }));
 }
+
+/**
+ * The newest `perThread` messages of the `threadCount` threads written to most recently, in two
+ * indexed reads, so neither a long history nor many quiet threads makes the read slow.
+ */
+export async function newestMessagesOfActiveThreads(
+  prisma: PrismaClient,
+  threadIds: string[],
+  threadCount: number,
+  perThread: number,
+): Promise<SidebarPreviewMessage[]> {
+  if (threadIds.length === 0) return [];
+  const active = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT t.id
+    FROM unnest(${threadIds}::text[]) AS t(id)
+    CROSS JOIN LATERAL (
+      SELECT "createdAt" FROM messages WHERE "threadId" = t.id ORDER BY seq DESC LIMIT 1
+    ) m
+    ORDER BY m."createdAt" DESC
+    LIMIT ${threadCount}
+  `);
+  const loaded = await withNewestThreadMessages(
+    prisma,
+    active.map((row) => ({ thread: { id: row.id } })),
+    perThread,
+  );
+  return loaded.flatMap((row) => row.thread?.messages ?? []);
+}

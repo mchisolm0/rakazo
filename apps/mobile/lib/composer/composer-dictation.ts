@@ -203,7 +203,9 @@ export function useComposerDictation({
         if (session.current !== mine) return;
         markTranscribing(mine);
         mine.finish = () => {};
-        const text = await transcribe(audio.uri, (await words)?.words ?? []);
+        const taught = (await words)?.words ?? [];
+        if (session.current !== mine) return;
+        const text = await transcribe(audio.uri, taught);
         if (end(mine) && text) onWordsRef.current(text);
       } finally {
         deleteQuietly(audio.uri);

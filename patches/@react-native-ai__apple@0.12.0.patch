@@ -39,7 +39,7 @@ index c0f036ce7d9905cf7a54c80199e4d6039f64ef30..ea22c1cb3b8cdfdbed5af478a4165d43
                  auto jsResult = react::TurboModuleConvertUtils::convertObjCObjectToJSIValue(rt, result);
                  resolveFunc.call(rt, jsResult);
 diff --git a/ios/transcription/AppleTranscriptionImpl.swift b/ios/transcription/AppleTranscriptionImpl.swift
-index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f59df018bc 100644
+index 188371a5f55fadae19187108c4a688569d0223e3..3d6b67d2cb5d2098de45da3fedec968ccced23b8 100644
 --- a/ios/transcription/AppleTranscriptionImpl.swift
 +++ b/ios/transcription/AppleTranscriptionImpl.swift
 @@ -12,6 +12,11 @@ import UniformTypeIdentifiers
@@ -130,15 +130,14 @@ index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f5
      if #available(iOS 26, *) {
        let tempDirectory = FileManager.default.temporaryDirectory
        let fileName = UUID().uuidString
-@@ -83,62 +114,128 @@ public class AppleTranscriptionImpl: NSObject {
+@@ -83,62 +114,142 @@ public class AppleTranscriptionImpl: NSObject {
        do {
          try audioData.write(to: fileURL)
          
 -        guard let audioFile = try? AVAudioFile(forReading: fileURL) else {
 -          reject("AppleTranscription", "Invalid audio data", nil)
-+        let audioFile: AVAudioFile
 +        do {
-+          audioFile = try AVAudioFile(forReading: fileURL)
++          _ = try AVAudioFile(forReading: fileURL)
 +        } catch {
 +          try? FileManager.default.removeItem(at: fileURL)
 +          reject("AppleTranscription", "Invalid audio data", error)
@@ -157,54 +156,28 @@ index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f5
 -            
 -            defer {
 -              try? FileManager.default.removeItem(at: fileURL)
-+            let locale = Locale(identifier: language)
-+            let transcriber = createTranscriber(for: locale)
-+            let dictation = words.isEmpty ? nil : await installedDictation(for: locale)
-+            let modules: [any SpeechModule] = [transcriber] + (dictation.map { [$0] } ?? [])
-+            let analyzer = SpeechAnalyzer(modules: modules)
-+            if dictation != nil {
-+              let context = AnalysisContext()
-+              context.contextualStrings[.general] = words
-+              try await analyzer.setContext(context)
-             }
+-            }
 -            
 -            var segments: [[String: Any]] = []
 -            
 -            Task {
-+
-+            let collectorTask = Task { () throws -> (segments: [CollectedSegment], runs: [HeardRun]) in
-+              var segments: [CollectedSegment] = []
-+              var runs: [HeardRun] = []
-+
-               for try await result in transcriber.results {
-                 if result.isFinal {
+-              for try await result in transcriber.results {
+-                if result.isFinal {
 -                  let segment: [String: Any] = [
 -                    "text": String(result.text.characters),
 -                    "startSecond": CMTimeGetSeconds(result.range.start),
 -                    "endSecond": CMTimeGetSeconds(CMTimeRangeGetEnd(result.range))
 -                  ]
 -                  segments.append(segment)
-+                  runs += Self.heardRuns(result.text, segment: segments.count)
-+                  segments.append(
-+                    CollectedSegment(
-+                      text: String(result.text.characters),
-+                      startSecond: CMTimeGetSeconds(result.range.start),
-+                      endSecond: CMTimeGetSeconds(CMTimeRangeGetEnd(result.range))
-+                    )
-+                  )
-+                }
-+              }
-+
-+              return (segments, runs)
-+            }
-+            let dictatedTask = dictation.map { dictation in
-+              Task { () throws -> [HeardRun] in
-+                var runs: [HeardRun] = []
-+                for try await result in dictation.results where result.isFinal {
-+                  runs += Self.heardRuns(result.text, segment: 0)
-                 }
-+                return runs
-               }
+-                }
+-              }
++            let result: [String: Any]
++            do {
++              result = try await analyze(fileURL, language: language, words: words)
++            } catch where !words.isEmpty {
++              // Taught words only refine the transcript; if the pass with them fails, transcribe
++              // as before rather than lose the recording.
++              result = try await analyze(fileURL, language: language, words: [])
              }
 -            
 -            let lastSampleTime = try await analyzer.analyzeSequence(from: audioFile)
@@ -212,50 +185,8 @@ index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f5
 -            if let lastSampleTime {
 -              try await analyzer.finalizeAndFinish(through: lastSampleTime)
 -            } else {
-+
-+            do {
-+              let lastSampleTime = try await analyzer.analyzeSequence(from: audioFile)
-+
-+              if let lastSampleTime {
-+                try await analyzer.finalizeAndFinish(through: lastSampleTime)
-+              } else {
-+                await analyzer.cancelAndFinishNow()
-+              }
-+
-+              var (collected, runs) = try await collectorTask.value
-+              // Taught words only refine the transcript; a failed dictation pass keeps it as heard.
-+              if let dictated = try? await dictatedTask?.value {
-+                runs = TaughtWords.apply(to: runs, dictated: dictated, taught: words)
-+                for index in collected.indices {
-+                  let text = runs.filter { $0.segment == index }.map(\.text).joined()
-+                  collected[index] = CollectedSegment(
-+                    text: text,
-+                    startSecond: collected[index].startSecond,
-+                    endSecond: collected[index].endSecond
-+                  )
-+                }
-+              }
-+              let segments: [[String: Any]] = collected.map { segment in
-+                [
-+                  "text": segment.text,
-+                  "startSecond": segment.startSecond,
-+                  "endSecond": segment.endSecond
-+                ]
-+              }
-+              let totalDuration = if let lastSampleTime { CMTimeGetSeconds(lastSampleTime) } else { 0.0 }
-+
-+              resolve([
-+                "segments": segments,
-+                "duration": totalDuration
-+              ])
-+            } catch {
-+              collectorTask.cancel()
-+              dictatedTask?.cancel()
-               await analyzer.cancelAndFinishNow()
-+              _ = try? await collectorTask.value
-+              _ = try? await dictatedTask?.value
-+              throw error
-             }
+-              await analyzer.cancelAndFinishNow()
+-            }
 -            
 -            let totalDuration = if let lastSampleTime { CMTimeGetSeconds(lastSampleTime) } else { 0.0 }
 -            
@@ -264,7 +195,7 @@ index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f5
 -              "duration": totalDuration
 -            ]
 -            
--            resolve(result)
+             resolve(result)
            } catch {
              reject("AppleTranscription", "Transcription failed: \(error.localizedDescription)", error)
            }
@@ -279,6 +210,95 @@ index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f5
    }
 -}
  
++  /// One SpeechAnalyzer pass over the recording. With `words`, the dictation model listens for
++  /// them alongside the long-form one, and `TaughtWords` swaps them into the long-form text.
++  @available(iOS 26, *)
++  private func analyze(_ fileURL: URL, language: String, words: [String]) async throws -> [String: Any] {
++    let locale = Locale(identifier: language)
++    let transcriber = createTranscriber(for: locale)
++    let dictation = words.isEmpty ? nil : await installedDictation(for: locale)
++    let modules: [any SpeechModule] = [transcriber] + (dictation.map { [$0] } ?? [])
++    let analyzer = SpeechAnalyzer(modules: modules)
++    if dictation != nil {
++      let context = AnalysisContext()
++      context.contextualStrings[.general] = words
++      try await analyzer.setContext(context)
++    }
++
++    let collectorTask = Task { () throws -> (segments: [CollectedSegment], runs: [HeardRun]) in
++      var segments: [CollectedSegment] = []
++      var runs: [HeardRun] = []
++
++      for try await result in transcriber.results {
++        if result.isFinal {
++          runs += Self.heardRuns(result.text, segment: segments.count)
++          segments.append(
++            CollectedSegment(
++              text: String(result.text.characters),
++              startSecond: CMTimeGetSeconds(result.range.start),
++              endSecond: CMTimeGetSeconds(CMTimeRangeGetEnd(result.range))
++            )
++          )
++        }
++      }
++
++      return (segments, runs)
++    }
++    let dictatedTask = dictation.map { dictation in
++      Task { () throws -> [HeardRun] in
++        var runs: [HeardRun] = []
++        for try await result in dictation.results where result.isFinal {
++          runs += Self.heardRuns(result.text, segment: 0)
++        }
++        return runs
++      }
++    }
++
++    do {
++      let lastSampleTime = try await analyzer.analyzeSequence(from: try AVAudioFile(forReading: fileURL))
++
++      if let lastSampleTime {
++        try await analyzer.finalizeAndFinish(through: lastSampleTime)
++      } else {
++        await analyzer.cancelAndFinishNow()
++      }
++
++      var (collected, runs) = try await collectorTask.value
++      // Taught words only refine the transcript; a failed dictation pass keeps it as heard.
++      if let dictated = try? await dictatedTask?.value {
++        runs = TaughtWords.apply(to: runs, dictated: dictated, taught: words)
++        for index in collected.indices {
++          let text = runs.filter { $0.segment == index }.map(\.text).joined()
++          collected[index] = CollectedSegment(
++            text: text,
++            startSecond: collected[index].startSecond,
++            endSecond: collected[index].endSecond
++          )
++        }
++      }
++      let segments: [[String: Any]] = collected.map { segment in
++        [
++          "text": segment.text,
++          "startSecond": segment.startSecond,
++          "endSecond": segment.endSecond
++        ]
++      }
++      let totalDuration = if let lastSampleTime { CMTimeGetSeconds(lastSampleTime) } else { 0.0 }
++
++      return [
++        "segments": segments,
++        "duration": totalDuration
++      ]
++    } catch {
++      collectorTask.cancel()
++      dictatedTask?.cancel()
++      await analyzer.cancelAndFinishNow()
++      _ = try? await collectorTask.value
++      _ = try? await dictatedTask?.value
++      throw error
++    }
++  }
++
 +  /// Every run of a result's text, timed where the transcriber reported audio for it.
 +  @available(iOS 26, *)
 +  private static func heardRuns(_ text: AttributedString, segment: Int) -> [HeardRun] {
@@ -295,10 +315,10 @@ index 188371a5f55fadae19187108c4a688569d0223e3..d02c47447866b113cee356c8c43fd4f5
 +}
 diff --git a/ios/transcription/TaughtWords.swift b/ios/transcription/TaughtWords.swift
 new file mode 100644
-index 0000000000000000000000000000000000000000..aef0e79650822c630b5d2afe56960bf49fb3586c
+index 0000000000000000000000000000000000000000..dcd5bbe913f77abadd325c518fc147a5169db7d6
 --- /dev/null
 +++ b/ios/transcription/TaughtWords.swift
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,108 @@
 +import Foundation
 +
 +/// One run of transcribed text and the audio it was heard in. Runs without a time range
@@ -337,12 +357,13 @@ index 0000000000000000000000000000000000000000..aef0e79650822c630b5d2afe56960bf4
 +        }
 +      }
 +      guard let best, best.score >= minimumSimilarity else { continue }
-+      let tail = out[best.last].text.reversed().prefix { $0.isPunctuation }.reversed()
-+      let current = out[best.first...best.last].map(\.text).joined()
-+        .trimmingCharacters(in: .whitespaces).dropLast(tail.count)
++      // Spacing and punctuation around the matched words, such as "(" and ")", stay as heard.
++      let joined = out[best.first...best.last].map(\.text).joined()
++      let lead = joined.prefix { $0.isWhitespace || $0.isPunctuation }
++      let tail = joined.dropFirst(lead.count).reversed().prefix { $0.isPunctuation }.reversed()
++      let current = joined.dropFirst(lead.count).dropLast(tail.count)
 +      // A taught word that is also an ordinary one ("Will") keeps the long-form casing.
 +      if current.lowercased() == heard.text.lowercased() { continue }
-+      let lead = out[best.first].text.prefix { $0.isWhitespace }
 +      out.replaceSubrange(
 +        best.first...best.last,
 +        with: [
@@ -362,7 +383,8 @@ index 0000000000000000000000000000000000000000..aef0e79650822c630b5d2afe56960bf4
 +  /// such as a full name can arrive as one run per word, so the longest match wins.
 +  static func taughtWordsHeard(in dictated: [HeardRun], taught: [String]) -> [HeardRun] {
 +    let byKey = Dictionary(taught.map { (key($0), $0) }, uniquingKeysWith: { first, _ in first })
-+    let longest = taught.map { $0.split(whereSeparator: \.isWhitespace).count }.max() ?? 1
++    // A taught word can arrive split into pieces ("GH" + "Dash"), and a phrase one run per word.
++    let longest = taught.map { $0.split(whereSeparator: \.isWhitespace).count }.max().map { $0 + 3 } ?? 1
 +    let timed = dictated.filter { $0.start >= 0 && !key($0.text).isEmpty }
 +    var found: [HeardRun] = []
 +    var index = 0

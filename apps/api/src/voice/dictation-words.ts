@@ -1,12 +1,18 @@
 import type { Actor } from "@rakazo/contracts";
 import { extractLinksFromText } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
-import { GUEST_ROLE, homeOrganizationId, runAsSystem, storedMessageBlocks } from "@rakazo/db";
+import {
+  GUEST_ROLE,
+  homeOrganizationId,
+  newestMessagesOfActiveThreads,
+  runAsSystem,
+  storedMessageBlocks,
+} from "@rakazo/db";
 
 /** The phone's recognizer is tuned for a short list; past this, later names stop helping. */
 const MAX_WORDS = 100;
-/** The newest chats and their latest messages: enough to see which repositories keep coming up,
- * read through the (threadId, seq) index so a long history never makes dictation slow. */
+/** The chats written to most recently and their latest messages: enough to see which
+ * repositories keep coming up, in two indexed reads on every dictation. */
 const RECENT_THREADS = 30;
 const MESSAGES_PER_THREAD = 10;
 const MAX_REPOSITORIES = 40;
@@ -62,23 +68,15 @@ export function dictationWords(prisma: PrismaClient, actor: Actor): Promise<stri
       }),
       prisma.thread.findMany({
         where: { spaceId: { in: spaceIds }, userId: actor.userId },
-        orderBy: { createdAt: "desc" },
-        take: RECENT_THREADS,
         select: { id: true },
       }),
     ]);
-    const messages = (
-      await Promise.all(
-        threads.map((thread) =>
-          prisma.message.findMany({
-            where: { threadId: thread.id },
-            orderBy: { seq: "desc" },
-            take: MESSAGES_PER_THREAD,
-            select: { id: true, blocks: true },
-          }),
-        ),
-      )
-    ).flat();
+    const messages = await newestMessagesOfActiveThreads(
+      prisma,
+      threads.map((thread) => thread.id),
+      RECENT_THREADS,
+      MESSAGES_PER_THREAD,
+    );
     const texts = messages.flatMap((message) =>
       storedMessageBlocks(message).flatMap((block) => (block.kind === "text" ? [block.text] : [])),
     );
