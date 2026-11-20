@@ -153,7 +153,7 @@ export default function Account() {
       ? undefined
       : // A floor rounds down, so it never claims more than the calls that report a cost.
         incomplete?.includes("costUsd")
-        ? `${usd.format(Math.floor(Number((costUsd * 100).toFixed(6))) / 100)}+`
+        ? `${usd.format(Math.floor(Number((costUsd * 100).toFixed(9))) / 100)}+`
         : costUsd > 0 && costUsd < 0.01
           ? `<${usd.format(0.01)}`
           : usd.format(costUsd);
