@@ -330,15 +330,16 @@ export async function markAppConnected(
       select: {
         id: true,
         groupId: true,
-        parentMessage: { select: { thread: { select: { id: true, groupId: true } } } },
+        parentMessage: { select: { thread: { select: { id: true } } } },
       },
     });
-    // A topic belongs to the chat it replies in: the bot's own, or a group it is in.
-    const chat = candidate?.parentMessage?.thread ?? candidate;
-    if (!candidate || !chat) throw new IsolationError();
-    if (chat.id !== ownThread.id) {
-      if (!chat.groupId) throw new IsolationError();
-      const target = await resolveThreadTarget(deps.prisma, actor, { groupId: chat.groupId });
+    if (!candidate) throw new IsolationError();
+    // Topics open only in a bot's own chat.
+    if (candidate.parentMessage) {
+      if (candidate.parentMessage.thread.id !== ownThread.id) throw new IsolationError();
+    } else {
+      if (!candidate.groupId) throw new IsolationError();
+      const target = await resolveThreadTarget(deps.prisma, actor, { groupId: candidate.groupId });
       if (target.kind !== "group" || !target.memberBotIds.includes(botId))
         throw new IsolationError();
     }

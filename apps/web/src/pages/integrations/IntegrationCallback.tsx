@@ -15,7 +15,7 @@ const FINISH_ATTEMPTS = 5;
  */
 export function IntegrationCallbackPage() {
   useEffect(() => {
-    const { connectionId, appUrl } = appConnectReturn(new URLSearchParams(window.location.search));
+    const { connectionId, appUrl } = appConnectReturn(window.location.pathname);
     // The mobile app finishes its own sign-ins, and this browser is often not signed in.
     if (appUrl) {
       window.location.replace(appUrl);

@@ -66,23 +66,26 @@ export function AppConnectCard({
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
+      let returned = true;
       if (started.authorizationUrl) {
         // Deferred, as sign-in does, so an older binary without the module fails with a message.
         const { openAuthSessionAsync } = await import("expo-web-browser").catch(() => {
           throw new Error(t`Could not continue`);
         });
-        // The web callback hands the sign-in back here; a cancelled one leaves Connect ready.
-        const result = await openAuthSessionAsync(
+        // The web callback hands the sign-in back here. A browser that refuses that hand-off
+        // reads as closed, so a closed one is read too, just once, before Connect is ready again.
+        const session = await openAuthSessionAsync(
           started.authorizationUrl,
           MOBILE_APP_CONNECT_CALLBACK_URL,
         );
-        if (result.type !== "success" || controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
+        returned = session.type === "success";
       }
       // Finishing the connection on the server also updates this card in the thread.
       const result = await waitForConnection(
         started.connectionId,
         (input) => rpc("connections/complete", input, { signal: controller.signal }),
-        { signal: controller.signal, attempts: RETURN_READ_ATTEMPTS },
+        { signal: controller.signal, attempts: returned ? RETURN_READ_ATTEMPTS : 1 },
       );
       if (result.status === "connected") {
         // The sidebar shows connected apps; it reads them again now rather than on its next visit,

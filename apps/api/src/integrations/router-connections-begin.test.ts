@@ -103,7 +103,7 @@ describe("connections.begin", () => {
     expect(begin).toHaveBeenCalledWith(
       {
         provider: "gmail",
-        redirectUrl: "http://127.0.0.1:5173/integrations/callback?connection=conn-old",
+        redirectUrl: "http://127.0.0.1:5173/integrations/callback/conn-old",
       },
       expect.anything(),
     );
@@ -183,8 +183,7 @@ describe("connections.begin", () => {
     expect(begin).toHaveBeenCalledWith(
       {
         provider: "gmail",
-        redirectUrl:
-          "http://127.0.0.1:5173/integrations/callback?connection=conn-new&client=mobile",
+        redirectUrl: "http://127.0.0.1:5173/integrations/callback/conn-new/mobile",
       },
       expect.anything(),
     );
