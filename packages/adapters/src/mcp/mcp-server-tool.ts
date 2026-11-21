@@ -168,7 +168,6 @@ export async function addMarketplaceConnector(
     select: {
       id: true,
       name: true,
-      secretId: true,
       enabled: true,
       allBots: true,
       assignments: { where: { botId }, select: { id: true } },
@@ -203,7 +202,6 @@ export async function addMarketplaceConnector(
     return {
       error: `${existing.name} is turned off. Ask the user to turn it on in Settings.`,
     };
-  const oauthLikely = !existing.secretId;
   const committed = await deps.prisma.$transaction(async (tx) => {
     const shown = await tx.message.findFirst({
       where: { threadId: run.threadId, clientNonce: nonce },
@@ -214,7 +212,8 @@ export async function addMarketplaceConnector(
       tx,
       run,
       "bot",
-      [approvalCard(existing, connector.server.transport, oauthLikely, listing)],
+      // Authorize asks the server, which signs in when it needs to and goes straight on when not.
+      [approvalCard(existing, connector.server.transport, true, listing)],
       undefined,
       nonce,
       false,
@@ -222,7 +221,7 @@ export async function addMarketplaceConnector(
     );
   });
   if (committed) await notifyApproval(deps, run, committed.eventSeq, committed.firstResponseRunId);
-  return { ok: true, server_id: existing.id, next_step: cardNextStep(oauthLikely) };
+  return { ok: true, server_id: existing.id, next_step: cardNextStep(true) };
 }
 
 function approvalCard(
