@@ -45,11 +45,41 @@ function reader() {
   });
 }
 
+/**
+ * A fake network for the server's sign-in metadata. It points at an authorization server that
+ * registers clients by itself, or one that only takes clients registered by hand.
+ */
+function signIn(registers: boolean) {
+  const json = (body: unknown) => Response.json(body);
+  return {
+    resolveHostname: async () => [{ address: "203.0.113.10", family: 4 }],
+    fetch: vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.pathname.startsWith("/.well-known/oauth-protected-resource"))
+        return json({
+          resource: "https://mcp.cloud.example.test/mcp",
+          authorization_servers: ["https://auth.cloud.example.test"],
+        });
+      if (url.hostname === "auth.cloud.example.test" && url.pathname.startsWith("/.well-known/"))
+        return json({
+          issuer: "https://auth.cloud.example.test",
+          authorization_endpoint: "https://auth.cloud.example.test/authorize",
+          token_endpoint: "https://auth.cloud.example.test/token",
+          response_types_supported: ["code"],
+          ...(registers
+            ? { registration_endpoint: "https://auth.cloud.example.test/register" }
+            : {}),
+        });
+      return new Response("not found", { status: 404 });
+    }),
+  };
+}
+
 it("reads a pinned plugin's server from its declaration files alone", async () => {
   const read = reader();
   // A full preview would fetch every skill; the declaration files are all it needs.
   const fetcher = vi.fn();
-  const found = await createMarketplaceConnectors({ read, fetcher }).find(
+  const found = await createMarketplaceConnectors({ read, fetcher, network: signIn(true) }).find(
     "Cloud",
     new AbortController().signal,
   );
@@ -71,5 +101,14 @@ it("reads a pinned plugin's server from its declaration files alone", async () =
 it("finds nothing for a name no listing has", async () => {
   await expect(
     createMarketplaceConnectors({ read: reader() }).find("Elsewhere", new AbortController().signal),
+  ).resolves.toBeNull();
+});
+
+it("offers no server whose sign-in needs a client registered by hand", async () => {
+  await expect(
+    createMarketplaceConnectors({ read: reader(), network: signIn(false) }).find(
+      "Cloud",
+      new AbortController().signal,
+    ),
   ).resolves.toBeNull();
 });

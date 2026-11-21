@@ -1,4 +1,7 @@
+import { discoverOAuthServerInfo } from "@modelcontextprotocol/sdk/client/auth.js";
 import type { PluginMarketplaceEntry } from "@rakazo/contracts";
+import { secureFetch } from "../mcp/mcp-transport.js";
+import type { RemoteTransportDependencies } from "../mcp/remote-mcp.js";
 import type {
   PluginMcpServerEntry,
   PluginRepoFetcher,
@@ -60,6 +63,30 @@ async function pinnedServers(source: string, read: PluginTextReader, signal: Abo
   return parsePluginDirectory({ files: files.flat(), resolvedSha: ref.ref }).mcpServers;
 }
 
+/**
+ * Whether one tap can start the server's sign-in: its authorization server registers Rakazo as a
+ * client by itself (RFC 7591), or it publishes no authorization server at all. One that needs a
+ * client registered by hand is set up in Settings instead, so chat does not offer it.
+ */
+async function signsInByItself(
+  endpoint: string,
+  network: RemoteTransportDependencies,
+  signal: AbortSignal,
+): Promise<boolean> {
+  const url = new URL(endpoint);
+  const safe = secureFetch(url, {}, {}, network);
+  try {
+    const { authorizationServerMetadata } = await discoverOAuthServerInfo(url, {
+      fetchFn: (input, init) => safe(input, { ...init, signal }),
+    });
+    return (
+      !authorizationServerMetadata || Boolean(authorizationServerMetadata.registration_endpoint)
+    );
+  } finally {
+    await safe.close();
+  }
+}
+
 const key = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 function named(entry: PluginMarketplaceEntry, app: string): boolean {
@@ -68,7 +95,12 @@ function named(entry: PluginMarketplaceEntry, app: string): boolean {
 }
 
 export function createMarketplaceConnectors(
-  options: { read?: PluginTextReader; fetcher?: PluginRepoFetcher } = {},
+  options: {
+    read?: PluginTextReader;
+    fetcher?: PluginRepoFetcher;
+    /** How the servers' sign-in metadata is reached. */
+    network?: RemoteTransportDependencies;
+  } = {},
 ): MarketplaceConnectors {
   const read = options.read ?? publicRead;
   const marketplace = createPluginMarketplace(read);
@@ -85,6 +117,7 @@ export function createMarketplaceConnectors(
           .mcpServers;
       const [server, ...more] = servers;
       if (!server || more.length || Object.keys(server.headers).length) return null;
+      if (!(await signsInByItself(server.endpoint, options.network ?? {}, signal))) return null;
       return {
         name: entry.displayName,
         description: entry.description,

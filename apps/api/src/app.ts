@@ -739,6 +739,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       marketplaceConnectors: createMarketplaceConnectors({
         read: pluginMarketplaceRead,
         fetcher: pluginRepoFetcher,
+        network: remoteConnectors,
       }),
       notifications,
       jobs,
