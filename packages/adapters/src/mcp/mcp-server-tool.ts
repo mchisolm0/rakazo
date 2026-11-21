@@ -2,8 +2,9 @@ import type { McpTransport, MessageBlock } from "@rakazo/contracts";
 import { McpRemoteEndpointSchema, McpTransportSchema } from "@rakazo/contracts";
 import { deriveMcpSlug } from "@rakazo/core";
 import type { McpServer } from "@rakazo/db";
-import { isUniqueViolation } from "@rakazo/db";
+import { availableInSpace, isUniqueViolation } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
+import type { MarketplaceConnector } from "../integrations/marketplace-connectors.js";
 import { toStringRecord } from "../memory/memory-provider-factory.js";
 import { persistMessageInTransaction, runLeaseFor } from "../runs/assembly/run-messages.js";
 import type { ExecutorDeps } from "../runs/executor/executor-deps.js";
@@ -127,7 +128,7 @@ export function needsOAuthProbe(parsed: {
 /** add_mcp_server: registers the server and, when asked, posts its approval card. */
 export async function addMcpServerFromTool(
   deps: ExecutorDeps,
-  run: { id: string; spaceId: string; userId: string; threadId: string; botId: string },
+  run: ToolRun,
   botId: string,
   args: Record<string, unknown>,
   executionId: string,
@@ -145,6 +146,112 @@ export async function addMcpServerFromTool(
         "Invalid MCP server details. Required: name, transport (streamable_http|sse), and an endpoint URL.",
     };
   }
+  return registerMcpServer(deps, run, botId, parsed, executionId);
+}
+
+type ToolRun = { id: string; spaceId: string; userId: string; threadId: string; botId: string };
+
+/** connect_app's fallback: offers a marketplace plugin's connector on the same approval card
+ * add_mcp_server posts, reusing the server when the user already has it. */
+export async function addMarketplaceConnector(
+  deps: ExecutorDeps,
+  run: ToolRun,
+  botId: string,
+  connector: MarketplaceConnector,
+  executionId: string,
+) {
+  const listing = { description: connector.description, logo: connector.logo };
+  const existing = await deps.prisma.mcpServer.findFirst({
+    where: { endpoint: connector.server.endpoint, ...availableInSpace(run) },
+    select: { id: true, name: true, secretId: true },
+  });
+  if (!existing)
+    return registerMcpServer(
+      deps,
+      run,
+      botId,
+      {
+        slug: deriveMcpSlug(connector.name),
+        name: connector.name,
+        description: connector.description.slice(0, 2000),
+        transport: connector.server.transport,
+        endpoint: connector.server.endpoint,
+        headers: {},
+        assignToSelf: true,
+      },
+      executionId,
+      listing,
+    );
+  const assigned = await deps.prisma.botMcpServer.findFirst({
+    where: { botId, serverId: existing.id },
+    select: { id: true },
+  });
+  if (assigned)
+    return {
+      status: "connected",
+      message: "This app is already connected and its tools are available.",
+    };
+  const oauthLikely = !existing.secretId;
+  const committed = await deps.prisma.$transaction((tx) =>
+    persistMessageInTransaction(
+      tx,
+      run,
+      "bot",
+      [approvalCard(existing, connector.server.transport, oauthLikely, listing)],
+      undefined,
+      undefined,
+      false,
+      runLeaseFor(deps, run.id),
+    ),
+  );
+  await notifyApproval(deps, run, committed.eventSeq, committed.firstResponseRunId);
+  return { ok: true, server_id: existing.id, next_step: cardNextStep(oauthLikely) };
+}
+
+function approvalCard(
+  server: { id: string; name: string },
+  transport: McpTransport,
+  needsOAuth: boolean,
+  listing?: { description: string; logo: string | null },
+  endpoint: string | null = null,
+): MessageBlock {
+  return {
+    kind: "mcp_approval",
+    name: server.name,
+    serverId: server.id,
+    transport,
+    // A listing says what the server is; the address is only shown for one the bot was given.
+    endpoint: listing ? null : endpoint,
+    needsOAuth,
+    status: "pending",
+    ...listing,
+  };
+}
+
+async function notifyApproval(
+  deps: ExecutorDeps,
+  run: ToolRun,
+  eventSeq: number | undefined,
+  firstResponseRunId: string | undefined,
+) {
+  if (eventSeq === undefined) return;
+  await deps.events.notify(run.threadId, eventSeq, firstResponseRunId).catch((error) => {
+    getLogger().error("MCP approval realtime notification", error);
+  });
+}
+
+function cardNextStep(oauthLikely: boolean) {
+  return `An approval card is in the chat. End your turn with one short sentence asking the user to ${oauthLikely ? "authorize" : "approve"} it there; the card already shows the server's details. You will be told when they connect it.`;
+}
+
+async function registerMcpServer(
+  deps: ExecutorDeps,
+  run: ToolRun,
+  botId: string,
+  parsed: ParsedMcpServerArgs,
+  executionId: string,
+  listing?: { description: string; logo: string | null },
+) {
   try {
     await assertSafeRemoteUrl(parsed.endpoint, deps.secretHttp?.resolveHostname, {
       allowPrivateEndpoint: deps.mcpAllowPrivateEndpoint === true,
@@ -204,16 +311,8 @@ export async function addMcpServerFromTool(
         },
       });
       if (!parsed.assignToSelf) return { server };
-      const blocks: MessageBlock[] = [
-        {
-          kind: "mcp_approval",
-          name: server.name,
-          serverId: server.id,
-          transport: parsed.transport,
-          endpoint: parsed.endpoint,
-          needsOAuth: oauthLikely,
-          status: "pending",
-        },
+      const blocks = [
+        approvalCard(server, parsed.transport, oauthLikely, listing, parsed.endpoint),
       ];
       const committed = await persistMessageInTransaction(
         tx,
@@ -242,18 +341,12 @@ export async function addMcpServerFromTool(
     }
     throw error;
   }
-  if (approvalEventSeq !== undefined) {
-    await deps.events
-      .notify(run.threadId, approvalEventSeq, approvalResponseRunId)
-      .catch((error) => {
-        getLogger().error("MCP approval realtime notification", error);
-      });
-  }
+  await notifyApproval(deps, run, approvalEventSeq, approvalResponseRunId);
   return {
     ok: true,
     server_id: serverRow.id,
     next_step: parsed.assignToSelf
-      ? `An approval card is in the chat. End your turn with one short sentence asking the user to ${oauthLikely ? "authorize" : "approve"} it there; the card already shows the server's details. You will be told when they connect it.`
+      ? cardNextStep(oauthLikely)
       : "The server was registered without assigning it to this bot.",
   };
 }

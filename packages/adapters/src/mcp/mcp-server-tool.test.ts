@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ExecutorDeps } from "../runs/executor/executor-deps.js";
 import {
+  addMarketplaceConnector,
   addMcpServerFromTool,
   buildMcpCredentialBlob,
   deriveMcpSlug,
@@ -113,6 +114,75 @@ describe("addMcpServerFromTool", () => {
       "exec-1",
     );
     expect(result).toEqual({ error: "Put token in a header instead of the server URL" });
+  });
+});
+
+const persisted = vi.hoisted(() =>
+  vi.fn(async () => ({ eventSeq: 7, firstResponseRunId: undefined })),
+);
+vi.mock("../runs/assembly/run-messages.js", () => ({
+  persistMessageInTransaction: persisted,
+  runLeaseFor: () => undefined,
+}));
+
+describe("addMarketplaceConnector", () => {
+  const run = { id: "run", spaceId: "space", userId: "user", threadId: "thread", botId: "bot" };
+  const connector = {
+    name: "Planning Notes",
+    description: "Plan work and write notes",
+    logo: null,
+    server: {
+      name: "notes",
+      transport: "streamable_http" as const,
+      endpoint: "https://tools.example.test/mcp",
+      headers: {},
+    },
+  };
+  function deps(assigned: boolean) {
+    const prisma = {
+      mcpServer: {
+        findFirst: vi.fn(async () => ({ id: "srv", name: "Planning Notes", secretId: null })),
+      },
+      botMcpServer: { findFirst: vi.fn(async () => (assigned ? { id: "a" } : null)) },
+      $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({})),
+    };
+    return { prisma, events: { notify: vi.fn(async () => {}) } } as unknown as ExecutorDeps;
+  }
+
+  it("says a server the bot already has is connected", async () => {
+    persisted.mockClear();
+    await expect(addMarketplaceConnector(deps(true), run, "bot", connector, "e")).resolves.toEqual(
+      expect.objectContaining({ status: "connected" }),
+    );
+    expect(persisted).not.toHaveBeenCalled();
+  });
+
+  it("offers the user's existing server on a card that shows the listing", async () => {
+    persisted.mockClear();
+    const result = await addMarketplaceConnector(deps(false), run, "bot", connector, "e");
+    expect(result).toMatchObject({ ok: true, server_id: "srv" });
+    expect(persisted).toHaveBeenCalledWith(
+      {},
+      run,
+      "bot",
+      [
+        {
+          kind: "mcp_approval",
+          name: "Planning Notes",
+          serverId: "srv",
+          transport: "streamable_http",
+          endpoint: null,
+          needsOAuth: true,
+          status: "pending",
+          description: "Plan work and write notes",
+          logo: null,
+        },
+      ],
+      undefined,
+      undefined,
+      false,
+      undefined,
+    );
   });
 });
 
