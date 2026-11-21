@@ -10,6 +10,7 @@ import { Text, View } from "react-native";
 import { rpc } from "../../lib/api/api";
 import { errorText } from "../../lib/api/user-error";
 import { appConnectPresentation } from "../../lib/cards/app-connect";
+import { finishReturnedAppConnection } from "../../lib/integrations/app-connect-return";
 import { native, useMobileTokens } from "../../lib/native/native";
 import { refreshRpcQueries } from "../../lib/query/query";
 import { useThreadReadOnly } from "../../lib/thread/thread-read-only";
@@ -78,7 +79,11 @@ export function AppConnectCard({
           started.authorizationUrl,
           MOBILE_APP_CONNECT_CALLBACK_URL,
         );
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted) {
+          // The card is gone, but a finished sign-in still has to land.
+          if (session.type === "success") finishReturnedAppConnection(session.url);
+          return;
+        }
         returned = session.type === "success";
       }
       // Finishing the connection on the server also updates this card in the thread.
