@@ -1,11 +1,9 @@
 import type { Actor, MessageBlock } from "@rakazo/contracts";
-import { QUEUE_HOLDING_RUN_STATUSES } from "@rakazo/core";
 import type { Prisma, PrismaClient, ThreadEvents } from "@rakazo/db";
 import {
   appendEventInTransaction,
   availableInSpace,
   changeMessageBlocks,
-  HOLDS_CHAT,
   IsolationError,
   storedMessageBlocks,
   withTransactionRetry,
@@ -289,17 +287,5 @@ export async function queueMcpConnectedRun(
     select: { name: true },
   });
   if (!server) return null;
-  // Approving while the bot is busy in that chat starts nothing: the approval already gives the
-  // working run the server's tools.
-  const busy = await tx.run.findFirst({
-    where: {
-      threadId: input.threadId,
-      botId: input.botId,
-      status: { in: [...QUEUE_HOLDING_RUN_STATUSES] },
-      ...HOLDS_CHAT,
-    },
-    select: { id: true },
-  });
-  if (busy) return null;
   return queueConnectedRun(tx, actor, { ...input, prompt: mcpConnectedPrompt(server.name) });
 }

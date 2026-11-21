@@ -224,6 +224,19 @@ describePostgres("queued turns share a chat one at a time (PostgreSQL)", () => {
     expect(await claimRun(deps, third!, "worker-2")).toBeUndefined();
   });
 
+  it("holds a turn with no message of its own, like carrying on after a connect, until the chat is free", async () => {
+    const working = await createRun({
+      trigger: "user",
+      status: "running",
+      startedAt: new Date(),
+    });
+    const carryOn = await createRun({ trigger: "user", status: "queued" });
+
+    expect(await claimRun(deps, carryOn, "worker-2")).toBeUndefined();
+    await system.run.update({ where: { id: working.id }, data: { status: "completed" } });
+    expect(await claimRun(deps, carryOn, "worker-2")).toBeDefined();
+  });
+
   it("keeps another bot's message waiting for a turn of its own instead of handing it over", async () => {
     await createRun({ trigger: "user", status: "running", startedAt: new Date() });
     const reply = await createRun({

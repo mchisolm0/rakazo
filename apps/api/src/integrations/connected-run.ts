@@ -4,7 +4,8 @@ import type { Prisma } from "@rakazo/db";
 /** Connecting from a card in a chat is the user's turn: queue a hidden-prompt run (like a call's
     hang-up) so the bot carries on with the new tools instead of waiting for another message.
     Queued even while the bot is busy in that chat, since the card flips once and nothing would
-    ask again. Skipped when the bot is no longer in the chat or archived along with it.
+    ask again; having no message of its own, it waits for that chat to be free (see chat-wait).
+    Skipped when the bot is no longer in the chat or archived along with it.
     Returns the run to wake once the transaction commits. */
 export async function queueConnectedRun(
   tx: Prisma.TransactionClient,
