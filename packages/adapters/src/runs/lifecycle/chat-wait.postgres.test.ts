@@ -167,7 +167,8 @@ describePostgres("queued turns share a chat one at a time (PostgreSQL)", () => {
     }
   });
 
-  it.each(["routine", "bot_message"])(
+  // "user" here is a turn with no message of its own, such as carrying on after a connect.
+  it.each(["routine", "bot_message", "user"])(
     "waits for the chat's working run, then starts a %s run when that run lets go",
     async (trigger) => {
       const working = await createRun({

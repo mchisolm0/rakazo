@@ -767,10 +767,16 @@ export async function sendThreadMessage(
                 !messageBypassesTakeoverWait(run) &&
                 runHoldsChat(run),
             );
+        // A run already working comes first: a queued turn, such as carrying on after a connect,
+        // would otherwise hold the message back from the run the person is talking to.
+        const byStart = [
+          ...holdingRuns.filter((run) => run.status !== "queued"),
+          ...holdingRuns.filter((run) => run.status === "queued"),
+        ];
         const active =
-          holdingRuns.find((run) => steersMessageFrom(run, actor)) ??
-          holdingRuns.find(steersUserMessage) ??
-          holdingRuns[0];
+          byStart.find((run) => steersMessageFrom(run, actor)) ??
+          byStart.find(steersUserMessage) ??
+          byStart[0];
         if (active) {
           // Another person's message waits for a run of its own, which acts with their accounts,
           // and is never shown as part of theirs.
