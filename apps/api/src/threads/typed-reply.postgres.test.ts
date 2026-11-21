@@ -155,9 +155,8 @@ describe.skipIf(!enabled)("typed replies to waiting cards (PostgreSQL)", () => {
             taskId: task.id,
             trigger: "user",
             status,
-            ...(status === "running"
-              ? { startedAt: new Date(), leaseOwner: "worker", leaseFence: 1 }
-              : {}),
+            // Claimed but not yet stamped with a start time, as the worker leaves it briefly.
+            ...(status === "running" ? { leaseOwner: "worker", leaseFence: 1 } : {}),
           },
         });
       };
