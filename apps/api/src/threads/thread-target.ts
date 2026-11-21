@@ -338,6 +338,15 @@ function groupSendTargets(
   return { botIds: resolveGroupTargetBotIds(targeting), namesNobody: !named };
 }
 
+/** A run already working comes before a queued one when a message picks the run to steer, so a
+ * queued turn (such as carrying on after a connect) never holds it back from the run the person
+ * is talking to. */
+const RUNS_WORKING_FIRST: Prisma.RunOrderByWithRelationInput[] = [
+  { startedAt: { sort: "asc", nulls: "last" } },
+  { createdAt: "asc" },
+  { id: "asc" },
+];
+
 export function latestWaitingRun<T extends { id: string; status: string; updatedAt: Date }>(
   runs: T[],
 ) {
@@ -660,6 +669,7 @@ export async function sendThreadMessage(
             botId: target.botId,
             status: { in: [...ACTIVE_RUN_STATUSES] },
           },
+          orderBy: RUNS_WORKING_FIRST,
           select: {
             id: true,
             taskId: true,
@@ -767,16 +777,10 @@ export async function sendThreadMessage(
                 !messageBypassesTakeoverWait(run) &&
                 runHoldsChat(run),
             );
-        // A run already working comes first: a queued turn, such as carrying on after a connect,
-        // would otherwise hold the message back from the run the person is talking to.
-        const byStart = [
-          ...holdingRuns.filter((run) => run.status !== "queued"),
-          ...holdingRuns.filter((run) => run.status === "queued"),
-        ];
         const active =
-          byStart.find((run) => steersMessageFrom(run, actor)) ??
-          byStart.find(steersUserMessage) ??
-          byStart[0];
+          holdingRuns.find((run) => steersMessageFrom(run, actor)) ??
+          holdingRuns.find(steersUserMessage) ??
+          holdingRuns[0];
         if (active) {
           // Another person's message waits for a run of its own, which acts with their accounts,
           // and is never shown as part of theirs.
@@ -892,6 +896,7 @@ export async function sendThreadMessage(
           botId: { in: targetBotIds },
           status: { in: [...ACTIVE_RUN_STATUSES] },
         },
+        orderBy: RUNS_WORKING_FIRST,
         select: {
           id: true,
           taskId: true,
