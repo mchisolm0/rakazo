@@ -2,7 +2,12 @@ import type { McpTransport, MessageBlock } from "@rakazo/contracts";
 import { McpRemoteEndpointSchema, McpTransportSchema } from "@rakazo/contracts";
 import { deriveMcpSlug } from "@rakazo/core";
 import type { McpServer } from "@rakazo/db";
-import { availableInSpace, isUniqueViolation } from "@rakazo/db";
+import {
+  availableInSpace,
+  isUniqueViolation,
+  storedMessageBlocks,
+  THREAD_LOCK_TRANSACTION_OPTIONS,
+} from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import type { MarketplaceConnector } from "../integrations/marketplace-connectors.js";
 import { toStringRecord } from "../memory/memory-provider-factory.js";
@@ -13,6 +18,8 @@ import { assertNoMcpEndpointCredential, assertSafeRemoteUrl } from "./remote-mcp
 export { deriveMcpSlug } from "@rakazo/core";
 
 const MAX_HEADERS = 32;
+/** Only recent cards count as already shown; an old one far up the chat should not block a new one. */
+const RECENT_MESSAGES = 50;
 
 export type ParsedMcpServerArgs = {
   slug: string;
@@ -208,11 +215,30 @@ export async function addMarketplaceConnector(
   // sign of a login, since starting one saves the client registration there.
   const signsIn = !hasKeys(existing.headers);
   const committed = await deps.prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM threads WHERE id = ${run.threadId} FOR UPDATE`;
     const shown = await tx.message.findFirst({
       where: { threadId: run.threadId, clientNonce: nonce },
       select: { id: true },
     });
     if (shown) return null;
+    // Asking again while a card for this server still waits points at that card instead.
+    const recent = await tx.message.findMany({
+      where: { threadId: run.threadId },
+      select: { id: true, blocks: true },
+      orderBy: { createdAt: "desc" },
+      take: RECENT_MESSAGES,
+    });
+    if (
+      recent.some((message) =>
+        storedMessageBlocks(message).some(
+          (block) =>
+            block.kind === "mcp_approval" &&
+            block.serverId === existing.id &&
+            block.status === "pending",
+        ),
+      )
+    )
+      return null;
     return persistMessageInTransaction(
       tx,
       run,
@@ -223,7 +249,7 @@ export async function addMarketplaceConnector(
       false,
       runLeaseFor(deps, run.id),
     );
-  });
+  }, THREAD_LOCK_TRANSACTION_OPTIONS);
   if (committed) await notifyApproval(deps, run, committed.eventSeq, committed.firstResponseRunId);
   return { ok: true, server_id: existing.id, next_step: cardNextStep(signsIn) };
 }
