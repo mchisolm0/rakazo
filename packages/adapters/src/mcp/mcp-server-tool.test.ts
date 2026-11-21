@@ -146,7 +146,6 @@ describe("addMarketplaceConnector", () => {
           {
             id: "srv",
             name: "Planning Notes",
-            secretId: null,
             enabled: true,
             allBots: false,
             assignments: [],
@@ -157,7 +156,6 @@ describe("addMarketplaceConnector", () => {
                 {
                   id: "other",
                   name: "Planning Notes",
-                  secretId: "s",
                   enabled: true,
                   allBots: false,
                   assignments: [{ id: "a" }],
