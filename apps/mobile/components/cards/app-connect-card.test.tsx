@@ -14,6 +14,7 @@ vi.mock("@lingui/react/macro", () => ({
   }),
 }));
 vi.mock("../../lib/api/api", () => ({ rpc }));
+vi.mock("../../lib/api/api-server", () => ({ apiBaseLoaded: async () => {} }));
 vi.mock("expo-web-browser", () => ({ openAuthSessionAsync: browser }));
 vi.mock("../../lib/native/native", () => ({ native: {}, useMobileTokens: () => ({}) }));
 vi.mock("../../lib/query/query", () => ({ refreshRpcQueries: vi.fn() }));
