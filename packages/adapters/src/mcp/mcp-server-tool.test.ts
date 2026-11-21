@@ -142,16 +142,30 @@ describe("addMarketplaceConnector", () => {
   function deps(assigned: boolean, server: { enabled?: boolean; allBots?: boolean } = {}) {
     const prisma = {
       mcpServer: {
-        findFirst: vi.fn(async () => ({
-          id: "srv",
-          name: "Planning Notes",
-          secretId: null,
-          enabled: true,
-          allBots: false,
-          ...server,
-        })),
+        findMany: vi.fn(async () => [
+          {
+            id: "srv",
+            name: "Planning Notes",
+            secretId: null,
+            enabled: true,
+            allBots: false,
+            assignments: [],
+            ...server,
+          },
+          ...(assigned
+            ? [
+                {
+                  id: "other",
+                  name: "Planning Notes",
+                  secretId: "s",
+                  enabled: true,
+                  allBots: false,
+                  assignments: [{ id: "a" }],
+                },
+              ]
+            : []),
+        ]),
       },
-      botMcpServer: { findFirst: vi.fn(async () => (assigned ? { id: "a" } : null)) },
       $transaction: vi.fn(async (fn: (client: unknown) => unknown) => fn(tx)),
     };
     return { prisma, events: { notify: vi.fn(async () => {}) } } as unknown as ExecutorDeps;
@@ -182,7 +196,7 @@ describe("addMarketplaceConnector", () => {
     expect(persisted).not.toHaveBeenCalled();
   });
 
-  it("says a server the bot already has is connected", async () => {
+  it("says the app is connected when any matching server already serves the bot", async () => {
     persisted.mockClear();
     await expect(addMarketplaceConnector(deps(true), run, "bot", connector, "e")).resolves.toEqual(
       expect.objectContaining({ status: "connected" }),
