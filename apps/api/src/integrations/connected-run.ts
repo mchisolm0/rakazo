@@ -21,6 +21,19 @@ export async function queueConnectedRun(
       OR: [
         { botId: input.botId },
         { group: { archivedAt: null, members: { some: { botId: input.botId } } } },
+        // A topic in either of those chats.
+        {
+          parentMessage: {
+            is: {
+              thread: {
+                OR: [
+                  { botId: input.botId },
+                  { group: { archivedAt: null, members: { some: { botId: input.botId } } } },
+                ],
+              },
+            },
+          },
+        },
       ],
     },
     select: { id: true },

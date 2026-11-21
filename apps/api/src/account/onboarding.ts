@@ -324,11 +324,22 @@ export async function markAppConnected(
   if (threadId && threadId !== ownThread.id) {
     const candidate = await deps.prisma.thread.findFirst({
       where: { id: threadId, spaceId: actor.spaceId },
+      select: {
+        id: true,
+        groupId: true,
+        parentMessage: { select: { thread: { select: { id: true, groupId: true } } } },
+      },
     });
-    if (!candidate?.groupId) throw new IsolationError();
-    const target = await resolveThreadTarget(deps.prisma, actor, { groupId: candidate.groupId });
-    if (target.kind !== "group" || !target.memberBotIds.includes(botId)) throw new IsolationError();
-    thread = { ...ownThread, id: target.threadId };
+    // A topic belongs to the chat it replies in: the bot's own, or a group it is in.
+    const chat = candidate?.parentMessage?.thread ?? candidate;
+    if (!candidate || !chat) throw new IsolationError();
+    if (chat.id !== ownThread.id) {
+      if (!chat.groupId) throw new IsolationError();
+      const target = await resolveThreadTarget(deps.prisma, actor, { groupId: chat.groupId });
+      if (target.kind !== "group" || !target.memberBotIds.includes(botId))
+        throw new IsolationError();
+    }
+    thread = { ...ownThread, id: candidate.id };
   }
   const providerAdapter = deps.connectors.managed(connectorId);
   if (!providerAdapter) return;
