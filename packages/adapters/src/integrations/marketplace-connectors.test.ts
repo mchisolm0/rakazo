@@ -1,3 +1,4 @@
+import { deferred } from "@rakazo/core/test-async";
 import { expect, it, vi } from "vitest";
 import { createMarketplaceConnectors } from "./marketplace-connectors.js";
 
@@ -139,11 +140,20 @@ it("follows the server's challenge to its metadata before offering it", async ()
 });
 
 it("gives up on a server whose address lookup never answers once the run stops waiting", async () => {
+  const lookupStarted = deferred();
   const run = new AbortController();
   const found = createMarketplaceConnectors({
     read: reader(),
-    network: { ...signIn(true), resolveHostname: () => new Promise(() => {}) },
+    network: {
+      ...signIn(true),
+      resolveHostname: () => {
+        lookupStarted.resolve();
+        return new Promise(() => {});
+      },
+    },
   }).find("Cloud", run.signal);
+  // The check's own deadline and the run's signal end it the same way, mid-lookup.
+  await lookupStarted.promise;
   run.abort();
   await expect(found).rejects.toThrow();
 });
