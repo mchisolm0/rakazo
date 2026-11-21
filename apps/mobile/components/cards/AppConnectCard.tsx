@@ -1,11 +1,12 @@
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import type { MessageBlock } from "@rakazo/contracts";
-import { appConnectedInput, waitForSignIn } from "@rakazo/core";
+import { MOBILE_APP_CONNECT_CALLBACK_URL } from "@rakazo/contracts";
+import { waitForConnection } from "@rakazo/core";
 import { fontWeight, typeScale } from "@rakazo/ui-tokens";
 import { useEffect, useRef, useState } from "react";
 import type { ViewProps } from "react-native";
-import { AppState, Linking, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { rpc } from "../../lib/api/api";
 import { errorText } from "../../lib/api/user-error";
 import { appConnectPresentation } from "../../lib/cards/app-connect";
@@ -14,6 +15,9 @@ import { refreshRpcQueries } from "../../lib/query/query";
 import { useThreadReadOnly } from "../../lib/thread/thread-read-only";
 import { ConnectorIcon } from "../integrations/connector-icon";
 import { NativeActionButton } from "../native/native-action-button";
+
+/** A few tries, so one failed request does not lose a sign-in that just finished. */
+const RETURN_READ_ATTEMPTS = 3;
 
 export function AppConnectCard({
   botId,
@@ -56,31 +60,34 @@ export function AppConnectCard({
           connectorId: block.connectorId,
           provider: block.provider,
           displayName: block.name,
+          origin: { botId, threadId, ...(messageId ? { messageId } : {}) },
+          client: "mobile",
         },
         { signal: controller.signal },
       );
       if (controller.signal.aborted) return;
-      if (started.authorizationUrl) await Linking.openURL(started.authorizationUrl);
-      const result = await waitForSignIn(
+      if (started.authorizationUrl) {
+        // Deferred, as sign-in does, so an older binary without the module fails with a message.
+        const { openAuthSessionAsync } = await import("expo-web-browser").catch(() => {
+          throw new Error(t`Could not continue`);
+        });
+        // The web callback hands the sign-in back here; a cancelled one leaves Connect ready.
+        const result = await openAuthSessionAsync(
+          started.authorizationUrl,
+          MOBILE_APP_CONNECT_CALLBACK_URL,
+        );
+        if (result.type !== "success" || controller.signal.aborted) return;
+      }
+      // Finishing the connection on the server also updates this card in the thread.
+      const result = await waitForConnection(
         started.connectionId,
         (input) => rpc("connections/complete", input, { signal: controller.signal }),
-        {
-          signal: controller.signal,
-          onSlow: () => setBusy(false),
-          whenBack: (read) => {
-            const subscription = AppState.addEventListener("change", (state) => {
-              if (state === "active") read();
-            });
-            return () => subscription.remove();
-          },
-        },
+        { signal: controller.signal, attempts: RETURN_READ_ATTEMPTS },
       );
       if (result.status === "connected") {
         // The sidebar shows connected apps; it reads them again now rather than on its next visit,
         // keeping what it shows until the new answer arrives.
         void refreshRpcQueries("connections/list");
-        await rpc("onboarding/appConnected", appConnectedInput(botId, threadId, block, messageId));
-        if (controller.signal.aborted) return;
         setLocalStatus("connected");
       }
     } catch (reason) {

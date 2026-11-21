@@ -12,11 +12,18 @@ import { deferred } from "@rakazo/core/test-async";
 import type { PrismaClient } from "@rakazo/db";
 import { configureProviderTransactionPool, runProviderTransaction } from "@rakazo/db";
 import { createLogger, createTestSink, installLogger } from "@rakazo/logging";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RouterDeps } from "../router.js";
 import { createRouter, handle } from "../router-test-support.js";
 
+const markAppConnected = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("../account/onboarding.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  markAppConnected,
+}));
+
 describe("connections.complete", () => {
+  beforeEach(() => markAppConnected.mockClear());
   it.each([
     ["complete", false],
     ["complete", true],
@@ -439,8 +446,9 @@ describe("connections.complete", () => {
     installLogger(createLogger({ service: "rakazo-api", level: "off", sinks: [] }));
   });
 
-  function pollFixture(status: string) {
+  function pollFixture(status: string, metadata?: unknown) {
     const row = {
+      metadata,
       id: "conn-1",
       spaceId: "workspace-1",
       userId: "user-1",
@@ -924,6 +932,34 @@ describe("connections.complete", () => {
     expect(analytics.capture.mock.calls).toEqual([
       ["user-1", { name: "tool_connected", app: "gmail" }, { id: "conn-1", at: row.createdAt }],
     ]);
+  });
+
+  it("updates the chat card the connection started from once, on the poll that connects it", async () => {
+    const origin = { botId: "bot-1", threadId: "thread-1", messageId: "message-1" };
+    const { complete } = pollFixture("pending", { attempt: "attempt-1", origin });
+
+    for (let poll = 0; poll < 3; poll += 1) {
+      await expect(complete()).resolves.toMatchObject({ body: { json: { status: "connected" } } });
+    }
+    expect(markAppConnected).toHaveBeenCalledOnce();
+    expect(markAppConnected).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: "user-1" }),
+      "bot-1",
+      "gmail",
+      "composio",
+      "thread-1",
+      "message-1",
+    );
+  });
+
+  it("connects the row even when its card cannot be updated", async () => {
+    const { complete } = pollFixture("pending", {
+      origin: { botId: "bot-1", threadId: "thread-1" },
+    });
+    markAppConnected.mockRejectedValueOnce(new Error("thread gone"));
+
+    await expect(complete()).resolves.toMatchObject({ body: { json: { status: "connected" } } });
   });
 
   it("records the credential once when the catalog finds the app connected", async () => {
