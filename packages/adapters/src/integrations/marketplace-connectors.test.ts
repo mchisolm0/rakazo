@@ -49,13 +49,28 @@ function reader() {
  * A fake network for the server's sign-in metadata. It points at an authorization server that
  * registers clients by itself, or one that only takes clients registered by hand.
  */
-function signIn(registers: boolean) {
+function signIn(registers: boolean, { challengeOnly = false } = {}) {
   const json = (body: unknown) => Response.json(body);
   return {
     resolveHostname: async () => [{ address: "203.0.113.10", family: 4 }],
     fetch: vi.fn(async (input: string | URL | Request) => {
       const url = new URL(input instanceof Request ? input.url : String(input));
-      if (url.pathname.startsWith("/.well-known/oauth-protected-resource"))
+      // Some servers name their metadata only in the challenge, at an address of their own.
+      if (url.pathname === "/mcp")
+        return new Response("unauthorized", {
+          status: 401,
+          headers: challengeOnly
+            ? {
+                "www-authenticate":
+                  'Bearer resource_metadata="https://mcp.cloud.example.test/meta/resource"',
+              }
+            : {},
+        });
+      if (
+        challengeOnly
+          ? url.pathname === "/meta/resource"
+          : url.pathname.startsWith("/.well-known/oauth-protected-resource")
+      )
         return json({
           resource: "https://mcp.cloud.example.test/mcp",
           authorization_servers: ["https://auth.cloud.example.test"],
@@ -110,5 +125,14 @@ it("offers no server whose sign-in needs a client registered by hand", async () 
       "Cloud",
       new AbortController().signal,
     ),
+  ).resolves.toBeNull();
+});
+
+it("follows the server's challenge to its metadata before offering it", async () => {
+  await expect(
+    createMarketplaceConnectors({
+      read: reader(),
+      network: signIn(false, { challengeOnly: true }),
+    }).find("Cloud", new AbortController().signal),
   ).resolves.toBeNull();
 });

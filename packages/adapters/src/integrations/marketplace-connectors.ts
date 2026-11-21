@@ -1,5 +1,10 @@
-import { discoverOAuthServerInfo } from "@modelcontextprotocol/sdk/client/auth.js";
+import {
+  discoverOAuthServerInfo,
+  extractResourceMetadataUrl,
+} from "@modelcontextprotocol/sdk/client/auth.js";
+import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 import type { PluginMarketplaceEntry } from "@rakazo/contracts";
+import { anySignal, deadlineSignal } from "@rakazo/core";
 import { secureFetch } from "../mcp/mcp-transport.js";
 import type { RemoteTransportDependencies } from "../mcp/remote-mcp.js";
 import type {
@@ -63,10 +68,14 @@ async function pinnedServers(source: string, read: PluginTextReader, signal: Abo
   return parsePluginDirectory({ files: files.flat(), resolvedSha: ref.ref }).mcpServers;
 }
 
+/** How long the sign-in check may take before the lookup gives up on the server. */
+const SIGN_IN_CHECK_MS = 10_000;
+
 /**
  * Whether one tap can start the server's sign-in: its authorization server registers Rakazo as a
  * client by itself (RFC 7591), or it publishes no authorization server at all. One that needs a
- * client registered by hand is set up in Settings instead, so chat does not offer it.
+ * client registered by hand is set up in Settings instead, so chat does not offer it. The server
+ * is asked first, as sign-in does, since some name their metadata only in their 401 challenge.
  */
 async function signsInByItself(
   endpoint: string,
@@ -75,14 +84,40 @@ async function signsInByItself(
 ): Promise<boolean> {
   const url = new URL(endpoint);
   const safe = secureFetch(url, {}, {}, network);
+  // Ending the check also drops any answer whose body nobody read.
+  const done = new AbortController();
+  const checkSignal = deadlineSignal(SIGN_IN_CHECK_MS, anySignal([signal, done.signal]));
+  const fetchFn: typeof fetch = (input, init) => safe(input, { ...init, signal: checkSignal });
   try {
+    const challenge = await fetchFn(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: { name: "rakazo", version: "0.1.0" },
+        },
+      }),
+    });
+    const resourceMetadataUrl =
+      challenge.status === 401 ? extractResourceMetadataUrl(challenge) : undefined;
+    await challenge.body?.cancel();
     const { authorizationServerMetadata } = await discoverOAuthServerInfo(url, {
-      fetchFn: (input, init) => safe(input, { ...init, signal }),
+      resourceMetadataUrl,
+      fetchFn,
     });
     return (
       !authorizationServerMetadata || Boolean(authorizationServerMetadata.registration_endpoint)
     );
   } finally {
+    done.abort();
     await safe.close();
   }
 }
