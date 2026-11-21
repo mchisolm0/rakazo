@@ -148,6 +148,7 @@ describe("addMarketplaceConnector", () => {
             name: "Planning Notes",
             enabled: true,
             allBots: false,
+            headers: {},
             assignments: [],
             ...server,
           },
@@ -181,6 +182,27 @@ describe("addMarketplaceConnector", () => {
       addMarketplaceConnector(deps(false, { enabled: false }), run, "bot", connector, "e"),
     ).resolves.toEqual({ error: expect.stringContaining("turned off") });
     expect(persisted).not.toHaveBeenCalled();
+  });
+
+  it("approves a server the user gave header credentials as it is", async () => {
+    persisted.mockClear();
+    await addMarketplaceConnector(
+      deps(false, { headers: { Authorization: true } } as never),
+      run,
+      "bot",
+      connector,
+      "e",
+    );
+    expect(persisted).toHaveBeenCalledWith(
+      tx,
+      run,
+      "bot",
+      [expect.objectContaining({ needsOAuth: false })],
+      undefined,
+      "connect-app:e",
+      false,
+      undefined,
+    );
   });
 
   it("posts no second card when a replay of the call finds the first", async () => {
