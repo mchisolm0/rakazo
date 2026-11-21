@@ -354,7 +354,7 @@ export async function markAppConnected(
     await tx.$executeRaw`SELECT id FROM threads WHERE id = ${thread.id} FOR UPDATE`;
     // Onboarding cards sit at the start of the chat and inline cards near the end;
     // bound both reads so a long chat is never scanned in full.
-    const select = { id: true, blocks: true, runId: true } as const;
+    const select = { id: true, blocks: true, runId: true, botId: true } as const;
     const first = await tx.message.findMany({
       where: { threadId: thread.id },
       select,
@@ -380,7 +380,7 @@ export async function markAppConnected(
         connectedAppBlock(block, connectorId, entry.slug, deps.connectors.defaultConnectorId),
       );
       if (!next) continue;
-      if (message.id === messageId && message.runId) botWaiting = true;
+      if (message.id === messageId && message.runId && message.botId === bot.id) botWaiting = true;
       await tx.message.update({ where: { id: message.id }, data: { blocks: next.stored } });
       events.push(
         await appendEventInTransaction(tx, {

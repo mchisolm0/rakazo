@@ -287,13 +287,13 @@ describe("after a card connects its app", () => {
     name: "Slack",
     status: "pending",
   };
-  function connected(message: { runId: string | null }) {
+  function connected(message: { runId: string | null; botId?: string }) {
     queueConnectedRun.mockClear();
     const setup = fixture([
       { connectorId: "pipedream", slug: "slack", name: "Slack", connected: true },
     ]);
     setup.tx.message.findMany = vi.fn(async () => [
-      { id: "card", blocks: [card], ...message },
+      { id: "card", blocks: [card], botId: "bot", ...message },
     ]) as never;
     return setup;
   }
@@ -316,6 +316,12 @@ describe("after a card connects its app", () => {
     await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread", "card");
     expect(queueConnectedRun).not.toHaveBeenCalled();
     expect(deps.jobs.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("starts no turn for another bot than the one whose card it is", async () => {
+    const { deps, actor } = connected({ runId: "asked", botId: "peer" });
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread", "card");
+    expect(queueConnectedRun).not.toHaveBeenCalled();
   });
 
   it("starts no turn when connected from somewhere other than the bot's card", async () => {
