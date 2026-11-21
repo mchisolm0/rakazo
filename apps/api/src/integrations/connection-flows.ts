@@ -628,6 +628,7 @@ export async function updateOriginCard(
       row.connectorId,
       origin.threadId,
       origin.messageId,
+      true,
     ),
   );
 }
