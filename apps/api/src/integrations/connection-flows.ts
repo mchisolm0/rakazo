@@ -451,7 +451,24 @@ export async function completeConnection(
             context.actor.spaceId,
           );
         let resolvedAccountId: string | undefined;
-        if (transactionConnector.resolveConnectedAccountId) {
+        // A sign-in request names the one account it created, so it needs no help from siblings;
+        // an abandoned earlier attempt must not hold a retry back.
+        const ownRequest = Boolean(
+          current.providerRef?.trim() && current.providerRef.trim() !== existing.provider,
+        );
+        if (transactionConnector.resolveConnectedAccountId && ownRequest) {
+          try {
+            resolvedAccountId = await resolveAccountId(current.providerRef, []);
+          } catch (error) {
+            getLogger().warn("connections.complete could not resolve the connected account", {
+              error,
+              connectionId: current.id,
+              connectorId: existing.connectorId,
+              provider: existing.provider,
+            });
+            return current;
+          }
+        } else if (transactionConnector.resolveConnectedAccountId) {
           const siblings = await tx.connection.findMany({
             where: {
               spaceId: context.actor.spaceId,
@@ -589,7 +606,7 @@ const ConnectionMetadataSchema = z.object({ origin: AppConnectOriginSchema.optio
  * Marks the chat card a connection started from as connected, which also lets the bot carry on.
  * Runs on the call that connects the row, so the card follows however the sign-in came back.
  */
-async function updateOriginCard(
+export async function updateOriginCard(
   deps: RouterDeps,
   actor: Actor,
   row: { id: string; connectorId: string; provider: string; metadata: unknown },

@@ -748,6 +748,28 @@ describe("connections.complete", () => {
     expect(row.providerRef).toBe("account-1");
   });
 
+  it("connects a retry's own sign-in while an abandoned earlier attempt stays pending", async () => {
+    const { complete, connector, connection, row } = pollFixture("pending");
+    row.providerRef = "request-2";
+    connection.findMany.mockResolvedValue([
+      { providerRef: "request-1", status: "pending" },
+    ] as never);
+    const resolveConnectedAccountId = vi.fn(async (_userId: string, _slug: string, ref: string) =>
+      ref === "request-2" ? "account-2" : undefined,
+    );
+    Object.assign(connector, { resolveConnectedAccountId });
+
+    await expect(complete()).resolves.toMatchObject({ body: { json: { status: "connected" } } });
+    expect(row.providerRef).toBe("account-2");
+    expect(resolveConnectedAccountId).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "request-1",
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
   it("leaves the row for the next poll when the provider cannot be asked for the account", async () => {
     const { complete, connector, row, sink } = pollFixture("pending");
     const resolveConnectedAccountId = vi.fn(async (): Promise<string | undefined> => {
@@ -962,7 +984,7 @@ describe("connections.complete", () => {
     await expect(complete()).resolves.toMatchObject({ body: { json: { status: "connected" } } });
   });
 
-  it("records the credential once when the catalog finds the app connected", async () => {
+  it("records the credential and updates the card once when the catalog finds the app connected", async () => {
     const createdAt = new Date("2026-08-26T00:00:00.000Z");
     const row = {
       id: "conn-1",
@@ -970,6 +992,7 @@ describe("connections.complete", () => {
       displayName: "Gmail",
       status: "pending",
       createdAt,
+      metadata: { attempt: "a", origin: { botId: "bot-1", threadId: "thread-1" } },
     };
     const connection = {
       findMany: vi.fn(async () => [{ ...row }]),
@@ -1036,6 +1059,17 @@ describe("connections.complete", () => {
     expect(analytics.capture.mock.calls).toEqual([
       ["user-1", { name: "tool_connected", app: "gmail" }, { id: "conn-1", at: createdAt }],
     ]);
+    // The catalog connected it before any callback could, so it updates the card itself.
+    expect(markAppConnected).toHaveBeenCalledOnce();
+    expect(markAppConnected).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: "user-1" }),
+      "bot-1",
+      "gmail",
+      "composio",
+      "thread-1",
+      undefined,
+    );
   });
 
   it("records nothing while the connection is still pending", async () => {
