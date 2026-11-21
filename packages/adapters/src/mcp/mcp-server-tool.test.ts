@@ -138,16 +138,49 @@ describe("addMarketplaceConnector", () => {
       headers: {},
     },
   };
-  function deps(assigned: boolean) {
+  const tx = { message: { findFirst: vi.fn(async (): Promise<{ id: string } | null> => null) } };
+  function deps(assigned: boolean, server: { enabled?: boolean; allBots?: boolean } = {}) {
     const prisma = {
       mcpServer: {
-        findFirst: vi.fn(async () => ({ id: "srv", name: "Planning Notes", secretId: null })),
+        findFirst: vi.fn(async () => ({
+          id: "srv",
+          name: "Planning Notes",
+          secretId: null,
+          enabled: true,
+          allBots: false,
+          ...server,
+        })),
       },
       botMcpServer: { findFirst: vi.fn(async () => (assigned ? { id: "a" } : null)) },
-      $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => fn({})),
+      $transaction: vi.fn(async (fn: (client: unknown) => unknown) => fn(tx)),
     };
     return { prisma, events: { notify: vi.fn(async () => {}) } } as unknown as ExecutorDeps;
   }
+
+  it("counts a server every bot gets as connected", async () => {
+    await expect(
+      addMarketplaceConnector(deps(false, { allBots: true }), run, "bot", connector, "e"),
+    ).resolves.toEqual(expect.objectContaining({ status: "connected" }));
+  });
+
+  it("asks for a turned-off server to be turned on instead of offering it", async () => {
+    persisted.mockClear();
+    await expect(
+      addMarketplaceConnector(deps(false, { enabled: false }), run, "bot", connector, "e"),
+    ).resolves.toEqual({ error: expect.stringContaining("turned off") });
+    expect(persisted).not.toHaveBeenCalled();
+  });
+
+  it("posts no second card when a replay of the call finds the first", async () => {
+    persisted.mockClear();
+    tx.message.findFirst.mockResolvedValueOnce({ id: "shown" });
+    await addMarketplaceConnector(deps(false), run, "bot", connector, "e");
+    expect(tx.message.findFirst).toHaveBeenLastCalledWith({
+      where: { threadId: "thread", clientNonce: "connect-app:e" },
+      select: { id: true },
+    });
+    expect(persisted).not.toHaveBeenCalled();
+  });
 
   it("says a server the bot already has is connected", async () => {
     persisted.mockClear();
@@ -162,7 +195,7 @@ describe("addMarketplaceConnector", () => {
     const result = await addMarketplaceConnector(deps(false), run, "bot", connector, "e");
     expect(result).toMatchObject({ ok: true, server_id: "srv" });
     expect(persisted).toHaveBeenCalledWith(
-      {},
+      tx,
       run,
       "bot",
       [
@@ -179,7 +212,7 @@ describe("addMarketplaceConnector", () => {
         },
       ],
       undefined,
-      undefined,
+      "connect-app:e",
       false,
       undefined,
     );
