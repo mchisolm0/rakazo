@@ -170,6 +170,7 @@ export async function addMarketplaceConnector(
       name: true,
       enabled: true,
       allBots: true,
+      headers: true,
       assignments: { where: { botId }, select: { id: true } },
     },
     orderBy: { enabled: "desc" },
@@ -202,6 +203,10 @@ export async function addMarketplaceConnector(
     return {
       error: `${existing.name} is turned off. Ask the user to turn it on in Settings.`,
     };
+  // A server given credentials in its headers is approved as it is. Otherwise Authorize asks the
+  // server, which signs in when it needs to and goes straight on when not; a stored secret is no
+  // sign of a login, since starting one saves the client registration there.
+  const signsIn = !hasKeys(existing.headers);
   const committed = await deps.prisma.$transaction(async (tx) => {
     const shown = await tx.message.findFirst({
       where: { threadId: run.threadId, clientNonce: nonce },
@@ -212,8 +217,7 @@ export async function addMarketplaceConnector(
       tx,
       run,
       "bot",
-      // Authorize asks the server, which signs in when it needs to and goes straight on when not.
-      [approvalCard(existing, connector.server.transport, true, listing)],
+      [approvalCard(existing, connector.server.transport, signsIn, listing)],
       undefined,
       nonce,
       false,
@@ -221,7 +225,11 @@ export async function addMarketplaceConnector(
     );
   });
   if (committed) await notifyApproval(deps, run, committed.eventSeq, committed.firstResponseRunId);
-  return { ok: true, server_id: existing.id, next_step: cardNextStep(true) };
+  return { ok: true, server_id: existing.id, next_step: cardNextStep(signsIn) };
+}
+
+function hasKeys(value: unknown): boolean {
+  return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
 }
 
 function approvalCard(

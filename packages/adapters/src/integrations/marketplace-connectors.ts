@@ -43,7 +43,7 @@ const CONNECTOR_FILES = [
 async function pinnedServers(source: string, read: PluginTextReader, signal: AbortSignal) {
   const ref = parsePluginSource(source);
   if (!ref.ref || !FULL_SHA.test(ref.ref)) return null;
-  const repo = new URL(ref.gitUrl).pathname.replace(/\.git$/, "");
+  const repo = new URL(ref.gitUrl).pathname;
   const dir = ref.subdir ? `${ref.subdir}/` : "";
   const files = await Promise.all(
     CONNECTOR_FILES.map(async (path) => {
