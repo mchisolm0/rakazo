@@ -61,8 +61,9 @@ function signIn(registers: boolean, { challengeOnly = false } = {}) {
           status: 401,
           headers: challengeOnly
             ? {
+                // Unquoted, as some servers send it.
                 "www-authenticate":
-                  'Bearer resource_metadata="https://mcp.cloud.example.test/meta/resource"',
+                  "Bearer resource_metadata=https://mcp.cloud.example.test/meta/resource",
               }
             : {},
         });
@@ -135,4 +136,14 @@ it("follows the server's challenge to its metadata before offering it", async ()
       network: signIn(false, { challengeOnly: true }),
     }).find("Cloud", new AbortController().signal),
   ).resolves.toBeNull();
+});
+
+it("gives up on a server whose address lookup never answers once the run stops waiting", async () => {
+  const run = new AbortController();
+  const found = createMarketplaceConnectors({
+    read: reader(),
+    network: { ...signIn(true), resolveHostname: () => new Promise(() => {}) },
+  }).find("Cloud", run.signal);
+  run.abort();
+  await expect(found).rejects.toThrow();
 });
