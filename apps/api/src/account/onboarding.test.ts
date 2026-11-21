@@ -300,7 +300,7 @@ describe("after a card connects its app", () => {
 
   it("lets the bot that asked for it carry on", async () => {
     const { deps, actor, tx } = connected({ runId: "asked" });
-    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread");
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread", "card");
     expect(queueConnectedRun).toHaveBeenCalledWith(tx, actor, {
       botId: "bot",
       threadId: "thread",
@@ -313,8 +313,14 @@ describe("after a card connects its app", () => {
 
   it("starts no turn for onboarding's own cards", async () => {
     const { deps, actor } = connected({ runId: null });
-    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread");
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread", "card");
     expect(queueConnectedRun).not.toHaveBeenCalled();
     expect(deps.jobs.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("starts no turn when connected from somewhere other than the bot's card", async () => {
+    const { deps, actor } = connected({ runId: "asked" });
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread");
+    expect(queueConnectedRun).not.toHaveBeenCalled();
   });
 });

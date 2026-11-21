@@ -372,14 +372,15 @@ export async function markAppConnected(
       : [];
     const messages = [...new Map([...first, ...latest, ...own].map((m) => [m.id, m])).values()];
     const events = [];
-    // A card a run posted is the bot waiting on this connection; onboarding's own cards are not.
+    // The card connected from, when a run posted it, is the bot waiting on this connection;
+    // onboarding's own cards and other copies of the card are not.
     let botWaiting = false;
     for (const message of messages) {
       const next = changeMessageBlocks(message, (block) =>
         connectedAppBlock(block, connectorId, entry.slug, deps.connectors.defaultConnectorId),
       );
       if (!next) continue;
-      if (message.runId) botWaiting = true;
+      if (message.id === messageId && message.runId) botWaiting = true;
       await tx.message.update({ where: { id: message.id }, data: { blocks: next.stored } });
       events.push(
         await appendEventInTransaction(tx, {
