@@ -23,9 +23,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function render(search: string) {
+async function render(pathname: string) {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  const location = { search, replace: vi.fn() };
+  const location = { pathname, search: "?status=success", replace: vi.fn() };
   vi.stubGlobal("location", location);
   const close = vi.spyOn(window, "close").mockImplementation(() => {});
   const container = document.createElement("div");
@@ -38,7 +38,7 @@ it("finishes the connection itself, then closes the card's popup", async () => {
   complete.mockResolvedValue({ status: "connected" });
   window.name = APP_CONNECT_WINDOW_NAME;
   window.sessionStorage.setItem("rakazo:app-connect-return:connection-1", "/app/bot");
-  const { location, close } = await render("?connection=connection-1&status=success");
+  const { location, close } = await render("/integrations/callback/connection-1");
   await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
   expect(complete).toHaveBeenCalledWith({ connectionId: "connection-1" }, expect.anything());
   expect(location.replace).not.toHaveBeenCalled();
@@ -47,13 +47,13 @@ it("finishes the connection itself, then closes the card's popup", async () => {
 it("returns a tab that left for the sign-in to its chat", async () => {
   complete.mockResolvedValue({ status: "connected" });
   window.sessionStorage.setItem("rakazo:app-connect-return:connection-1", "/app/bot");
-  const { location, close } = await render("?connection=connection-1");
+  const { location, close } = await render("/integrations/callback/connection-1");
   await vi.waitFor(() => expect(location.replace).toHaveBeenCalledWith("/app/bot"));
   expect(close).not.toHaveBeenCalled();
 });
 
 it("hands a sign-in the mobile app started back to the app without finishing it", async () => {
-  const { location, close } = await render("?connection=connection-1&client=mobile&status=success");
+  const { location, close } = await render("/integrations/callback/connection-1/mobile");
   expect(location.replace).toHaveBeenCalledWith("rakazo://app-connect?connection=connection-1");
   expect(complete).not.toHaveBeenCalled();
   expect(close).not.toHaveBeenCalled();

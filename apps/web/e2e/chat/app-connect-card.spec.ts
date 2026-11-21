@@ -102,7 +102,7 @@ test("an app's sign-in finishes in its popup even after the chat tab is gone", a
   // The chat closes before the provider sends the sign-in back to the callback.
   await page.close();
   const closed = popup.waitForEvent("close");
-  await popup.goto(`/integrations/callback?connection=${json.connectionId}`);
+  await popup.goto(`/integrations/callback/${json.connectionId}`);
   await closed;
 
   const again = await context.newPage();

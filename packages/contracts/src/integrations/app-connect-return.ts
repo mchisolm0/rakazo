@@ -18,27 +18,37 @@ export const APP_CONNECT_CALLBACK_PATH = "/integrations/callback";
 /** The deep link the web callback hands a mobile app's catalog sign-in back to. */
 export const MOBILE_APP_CONNECT_CALLBACK_URL = "rakazo://app-connect";
 
-/** Where the provider sends the browser once the sign-in for this connection ends. */
+/**
+ * Where the provider sends the browser once the sign-in for this connection ends. The connection
+ * rides in the path, so the query stays the provider's own to append to.
+ */
 export function appConnectCallbackUrl(
   webOrigin: string,
   connectionId: string,
   client: AppConnectClient,
 ): string {
-  const params = new URLSearchParams({ connection: connectionId });
-  if (client) params.set("client", client);
-  return `${webOrigin}${APP_CONNECT_CALLBACK_PATH}?${params}`;
+  const path = `${APP_CONNECT_CALLBACK_PATH}/${encodeURIComponent(connectionId)}`;
+  return `${webOrigin}${path}${client ? `/${client}` : ""}`;
+}
+
+/** Whether a page path is a catalog sign-in's callback. */
+export function isAppConnectCallbackPath(pathname: string): boolean {
+  return (
+    pathname === APP_CONNECT_CALLBACK_PATH || pathname.startsWith(`${APP_CONNECT_CALLBACK_PATH}/`)
+  );
 }
 
 /** The connection a callback finishes, and where a sign-in the mobile app started goes back to. */
-export function appConnectReturn(params: URLSearchParams): {
+export function appConnectReturn(pathname: string): {
   connectionId: string | null;
   appUrl: string | null;
 } {
-  const connectionId = params.get("connection");
+  const [id, client] = pathname.slice(APP_CONNECT_CALLBACK_PATH.length + 1).split("/");
+  const connectionId = id ? decodeURIComponent(id) : null;
   return {
     connectionId,
     appUrl:
-      connectionId && params.get("client") === "mobile"
+      connectionId && client === "mobile"
         ? `${MOBILE_APP_CONNECT_CALLBACK_URL}?${new URLSearchParams({ connection: connectionId })}`
         : null,
   };
