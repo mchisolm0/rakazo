@@ -43,6 +43,7 @@ import {
   createConnectorRuntime,
   createDubPartnerProgram,
   createLifecycleEmailSender,
+  createMarketplaceConnectors,
   createMediaGenerationProvider,
   createPaymentWalletProvider,
   createProductAnalytics,
@@ -735,6 +736,10 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       artifacts,
       secretStore: secrets,
       secretHttp: remoteConnectors,
+      marketplaceConnectors: createMarketplaceConnectors({
+        read: pluginMarketplaceRead,
+        fetcher: pluginRepoFetcher,
+      }),
       notifications,
       jobs,
       events,
