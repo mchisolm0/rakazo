@@ -31,6 +31,8 @@ jobs:
 
   codeql:
     name: CodeQL (${{ matrix.language }})
+    # Upstream scans the shared code; a fork runs it only by hand.
+    if: ${{ !github.event.repository.fork || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
