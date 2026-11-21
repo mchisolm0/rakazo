@@ -163,11 +163,24 @@ export async function addMarketplaceConnector(
   const listing = { description: connector.description, logo: connector.logo };
   // One card per call, even when a replay of it finds the server the first attempt saved.
   const nonce = `connect-app:${executionId}`;
-  const existing = await deps.prisma.mcpServer.findFirst({
+  const matches = await deps.prisma.mcpServer.findMany({
     where: { endpoint: connector.server.endpoint, ...availableInSpace(run) },
-    select: { id: true, name: true, secretId: true, enabled: true, allBots: true },
+    select: {
+      id: true,
+      name: true,
+      secretId: true,
+      enabled: true,
+      allBots: true,
+      assignments: { where: { botId }, select: { id: true } },
+    },
     orderBy: { enabled: "desc" },
   });
+  if (matches.some((match) => match.enabled && (match.allBots || match.assignments.length > 0)))
+    return {
+      status: "connected",
+      message: "This app is already connected and its tools are available.",
+    };
+  const existing = matches[0];
   if (!existing)
     return registerMcpServer(
       deps,
@@ -189,17 +202,6 @@ export async function addMarketplaceConnector(
   if (!existing.enabled)
     return {
       error: `${existing.name} is turned off. Ask the user to turn it on in Settings.`,
-    };
-  const assigned =
-    existing.allBots ||
-    (await deps.prisma.botMcpServer.findFirst({
-      where: { botId, serverId: existing.id },
-      select: { id: true },
-    }));
-  if (assigned)
-    return {
-      status: "connected",
-      message: "This app is already connected and its tools are available.",
     };
   const oauthLikely = !existing.secretId;
   const committed = await deps.prisma.$transaction(async (tx) => {

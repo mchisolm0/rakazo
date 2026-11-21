@@ -37,7 +37,8 @@ export function createMarketplaceConnectors(
       const { entries } = await marketplace.catalog(app);
       const entry = entries.find((candidate) => candidate.hasConnector && named(candidate, app));
       if (!entry) return null;
-      // The preview reads the commit the listing pins, never the plugin's latest.
+      // The commit the listing pins, or the registry's current one for a listing that pins none,
+      // as installing it from the marketplace would.
       const plugin = await previewPluginInstall({
         source: entry.source,
         fetcher: options.fetcher,
