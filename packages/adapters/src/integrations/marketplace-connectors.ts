@@ -44,7 +44,7 @@ async function pinnedServers(source: string, read: PluginTextReader, signal: Abo
   const ref = parsePluginSource(source);
   if (!ref.ref || !FULL_SHA.test(ref.ref)) return null;
   const repo = new URL(ref.gitUrl).pathname;
-  const dir = ref.subdir ? `${ref.subdir}/` : "";
+  const dir = ref.subdir ? `${ref.subdir.split("/").map(encodeURIComponent).join("/")}/` : "";
   const files = await Promise.all(
     CONNECTOR_FILES.map(async (path) => {
       try {

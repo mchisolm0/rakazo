@@ -138,7 +138,13 @@ describe("addMarketplaceConnector", () => {
       headers: {},
     },
   };
-  const tx = { message: { findFirst: vi.fn(async (): Promise<{ id: string } | null> => null) } };
+  const tx = {
+    $executeRaw: vi.fn(),
+    message: {
+      findFirst: vi.fn(async (): Promise<{ id: string } | null> => null),
+      findMany: vi.fn(async (): Promise<Array<{ id: string; blocks: unknown[] }>> => []),
+    },
+  };
   function deps(assigned: boolean, server: { enabled?: boolean; allBots?: boolean } = {}) {
     const prisma = {
       mcpServer: {
@@ -203,6 +209,29 @@ describe("addMarketplaceConnector", () => {
       false,
       undefined,
     );
+  });
+
+  it("points at a card for the server that still waits instead of posting another", async () => {
+    persisted.mockClear();
+    tx.message.findMany.mockResolvedValueOnce([
+      {
+        id: "earlier",
+        blocks: [
+          {
+            kind: "mcp_approval",
+            name: "Planning Notes",
+            serverId: "srv",
+            transport: "streamable_http",
+            endpoint: null,
+            needsOAuth: true,
+            status: "pending",
+          },
+        ],
+      },
+    ]);
+    const result = await addMarketplaceConnector(deps(false), run, "bot", connector, "again");
+    expect(result).toMatchObject({ ok: true, server_id: "srv" });
+    expect(persisted).not.toHaveBeenCalled();
   });
 
   it("posts no second card when a replay of the call finds the first", async () => {
