@@ -358,6 +358,17 @@ describe("after a card connects its app", () => {
     );
   });
 
+  it("takes the server's word for a connection it made itself, without asking the provider", async () => {
+    const { deps, actor } = connected({ runId: "asked" });
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread", "card", true);
+    expect(deps.connectors.managed).not.toHaveBeenCalled();
+    expect(queueConnectedRun).toHaveBeenCalledWith(
+      expect.anything(),
+      actor,
+      expect.objectContaining({ prompt: expect.stringContaining('"Slack"') }),
+    );
+  });
+
   it("starts no turn for onboarding's own cards", async () => {
     const { deps, actor } = connected({ runId: null });
     await markAppConnected(deps, actor, "bot", "slack", "pipedream", "thread", "card");

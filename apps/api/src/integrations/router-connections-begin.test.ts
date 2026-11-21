@@ -205,6 +205,7 @@ describe("connections.begin", () => {
       "composio",
       "thread-1",
       undefined,
+      true,
     );
   });
 

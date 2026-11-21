@@ -972,6 +972,7 @@ describe("connections.complete", () => {
       "composio",
       "thread-1",
       "message-1",
+      true,
     );
   });
 
@@ -1069,6 +1070,7 @@ describe("connections.complete", () => {
       "composio",
       "thread-1",
       undefined,
+      true,
     );
   });
 
