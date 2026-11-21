@@ -161,9 +161,12 @@ export async function addMarketplaceConnector(
   executionId: string,
 ) {
   const listing = { description: connector.description, logo: connector.logo };
+  // One card per call, even when a replay of it finds the server the first attempt saved.
+  const nonce = `connect-app:${executionId}`;
   const existing = await deps.prisma.mcpServer.findFirst({
     where: { endpoint: connector.server.endpoint, ...availableInSpace(run) },
-    select: { id: true, name: true, secretId: true },
+    select: { id: true, name: true, secretId: true, enabled: true, allBots: true },
+    orderBy: { enabled: "desc" },
   });
   if (!existing)
     return registerMcpServer(
@@ -181,30 +184,42 @@ export async function addMarketplaceConnector(
       },
       executionId,
       listing,
+      nonce,
     );
-  const assigned = await deps.prisma.botMcpServer.findFirst({
-    where: { botId, serverId: existing.id },
-    select: { id: true },
-  });
+  if (!existing.enabled)
+    return {
+      error: `${existing.name} is turned off. Ask the user to turn it on in Settings.`,
+    };
+  const assigned =
+    existing.allBots ||
+    (await deps.prisma.botMcpServer.findFirst({
+      where: { botId, serverId: existing.id },
+      select: { id: true },
+    }));
   if (assigned)
     return {
       status: "connected",
       message: "This app is already connected and its tools are available.",
     };
   const oauthLikely = !existing.secretId;
-  const committed = await deps.prisma.$transaction((tx) =>
-    persistMessageInTransaction(
+  const committed = await deps.prisma.$transaction(async (tx) => {
+    const shown = await tx.message.findFirst({
+      where: { threadId: run.threadId, clientNonce: nonce },
+      select: { id: true },
+    });
+    if (shown) return null;
+    return persistMessageInTransaction(
       tx,
       run,
       "bot",
       [approvalCard(existing, connector.server.transport, oauthLikely, listing)],
       undefined,
-      undefined,
+      nonce,
       false,
       runLeaseFor(deps, run.id),
-    ),
-  );
-  await notifyApproval(deps, run, committed.eventSeq, committed.firstResponseRunId);
+    );
+  });
+  if (committed) await notifyApproval(deps, run, committed.eventSeq, committed.firstResponseRunId);
   return { ok: true, server_id: existing.id, next_step: cardNextStep(oauthLikely) };
 }
 
@@ -251,6 +266,7 @@ async function registerMcpServer(
   parsed: ParsedMcpServerArgs,
   executionId: string,
   listing?: { description: string; logo: string | null },
+  clientNonce?: string,
 ) {
   try {
     await assertSafeRemoteUrl(parsed.endpoint, deps.secretHttp?.resolveHostname, {
@@ -320,7 +336,7 @@ async function registerMcpServer(
         "bot",
         blocks,
         undefined,
-        undefined,
+        clientNonce,
         false,
         runLeaseFor(deps, run.id),
       );
