@@ -72,7 +72,20 @@ export async function loadRunHistoryMessages(
    * the latest replies of the routine's earlier runs, however far back they are.
    */
   routine?: { routineId: string; earlierResults: number },
+  /**
+   * The message this run answers: the run reads the chat as it stood then, plus its own replies.
+   * A later delivery that started a run of its own stays out of this one.
+   */
+  answers?: { sourceMessageId: string },
 ) {
+  const answeredSeq = answers
+    ? (
+        await prisma.message.findUnique({
+          where: { id: answers.sourceMessageId, threadId: run.threadId },
+          select: { seq: true },
+        })
+      )?.seq
+    : undefined;
   const readableIds = routine
     ? (
         await prisma.$queryRaw<Array<{ id: string }>>`
@@ -100,6 +113,9 @@ export async function loadRunHistoryMessages(
               { role: "bot", runId: run.id },
             ],
           }
+        : {}),
+      ...(answeredSeq !== undefined
+        ? { AND: [{ OR: [{ seq: { lte: answeredSeq } }, { runId: run.id }] }] }
         : {}),
     },
     orderBy: { seq: "desc" },
