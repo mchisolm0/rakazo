@@ -74,7 +74,8 @@ export async function loadRunHistoryMessages(
   routine?: { routineId: string; earlierResults: number },
   /**
    * The message this run answers: the run reads the chat as it stood then, plus its own replies.
-   * A later delivery that started a run of its own stays out of this one.
+   * A later delivery stays out of this one, even one held while it worked, which carries this
+   * run's id for display until a run of its own answers it.
    */
   answers?: { sourceMessageId: string },
 ) {
@@ -115,7 +116,7 @@ export async function loadRunHistoryMessages(
           }
         : {}),
       ...(answeredSeq !== undefined
-        ? { AND: [{ OR: [{ seq: { lte: answeredSeq } }, { runId: run.id }] }] }
+        ? { AND: [{ OR: [{ seq: { lte: answeredSeq } }, { role: "bot", runId: run.id }] }] }
         : {}),
     },
     orderBy: { seq: "desc" },

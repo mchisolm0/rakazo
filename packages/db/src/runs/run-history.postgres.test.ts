@@ -301,10 +301,11 @@ describePostgres("what a run reads of its thread (PostgreSQL)", () => {
       posted.push(id);
       return id;
     };
-    // The first run waits on an approval while the second delivery arrives and starts its own.
+    // The second delivery arrives while the first run works, so it is held under that run's id
+    // for display, then gets a run of its own once the first one pauses on an approval.
     const firstDelivery = await post("user", "Bug: the grid sits too far out");
     const firstAsk = await post("bot", "Allow the fetch?", first);
-    const secondDelivery = await post("user", "Bug: the composer looks weird");
+    const secondDelivery = await post("user", "Bug: the composer looks weird", first);
     const secondAsk = await post("bot", "Allow the fetch?", second);
     const firstAnswer = await post("bot", "Triage for the grid", first);
     try {
