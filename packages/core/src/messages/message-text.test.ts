@@ -23,6 +23,18 @@ describe("copyableMessageText", () => {
     ).toBe("first\nworking\nquestion?");
   });
 
+  it("copies a webhook post's words and leaves out its buttons", () => {
+    const buttons = [{ label: "Open", url: "https://example.com" }];
+    expect(
+      copyableMessageText(
+        message([
+          { kind: "post", markdown: "Build **finished**" },
+          { kind: "buttons", buttons },
+        ]),
+      ),
+    ).toBe("Build **finished**");
+  });
+
   it("leaves out a block kind it does not know, as an older client does with a newer server's page", () => {
     // Clients read blocks without validating them, so a newer kind reaches this code as is.
     const page = { kind: "page", pageId: "page-1", version: 1, title: "Plan" };

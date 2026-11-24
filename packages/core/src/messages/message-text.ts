@@ -8,11 +8,12 @@ export function channelMessageLine(
   return `${block.fromLabel} (${messagingProviderLabel(block.provider, block.transport)}): ${block.text}`;
 }
 
-/** The message's text exactly as written (text, ask and progress, no chrome), for selection. */
+/** The message's text exactly as written (text, ask, progress and posts, no chrome), for selection. */
 export function selectableMessageText(message: { blocks: readonly MessageBlock[] }): string {
   return message.blocks
     .map((block) => {
       if (block.kind === "channel_message") return channelMessageLine(block);
+      if (block.kind === "post") return block.markdown;
       if (block.kind === "text" || block.kind === "progress" || block.kind === "ask")
         return block.text;
       return "";

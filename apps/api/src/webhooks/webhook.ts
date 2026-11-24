@@ -74,7 +74,7 @@ export function mountWebhookHttpRoutes(app: Hono, deps: WebhookDeps) {
     if (isPost(payload.post)) {
       const post = postSchema.safeParse(payload.post);
       if (!post.success) return c.json({ error: "Invalid post" }, 400);
-      return c.json(await postWebhookMessage(deps, target, post.data));
+      return webhookDeliveryResponse(c, postWebhookMessage(deps, target, post.data));
     }
 
     const webhookRoutines = await deps.prisma.routine.findMany({
