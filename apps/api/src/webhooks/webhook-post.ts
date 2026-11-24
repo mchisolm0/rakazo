@@ -5,6 +5,8 @@ import {
   appendEventInTransaction,
   createThreadMessageInTransaction,
   loadSpaceContentKeys,
+  SpaceDeletionInProgressError,
+  spaceTakesWork,
   THREAD_LOCK_TRANSACTION_OPTIONS,
 } from "@rakazo/db";
 import { bestEffort } from "@rakazo/logging";
@@ -41,6 +43,8 @@ export async function postWebhookMessage(
   // Keys load before the thread lock is taken, as a send's do.
   await loadSpaceContentKeys(deps.prisma, spaceId);
   const committed = await deps.prisma.$transaction(async (tx) => {
+    // A Space being deleted takes no new messages; its lock comes before the thread's, as in a send.
+    if (!(await spaceTakesWork(tx, spaceId))) throw new SpaceDeletionInProgressError();
     const message = await createThreadMessageInTransaction(tx, {
       threadId,
       botId,

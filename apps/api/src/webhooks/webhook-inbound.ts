@@ -234,7 +234,7 @@ export async function loadWebhookTarget(
  */
 export async function webhookDeliveryResponse(
   c: Context,
-  delivery: ReturnType<typeof deliverWebhookEvent>,
+  delivery: Promise<object>,
 ): Promise<Response> {
   try {
     return c.json(await delivery);

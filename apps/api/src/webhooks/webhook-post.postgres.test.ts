@@ -40,18 +40,19 @@ describePostgres("webhook post (PostgreSQL)", () => {
     await runtime?.pool.end();
   });
 
-  it("posts the text and buttons as the bot without a routine or run, and pushes it", async () => {
+  /** A bot with a webhook in `space`, and an app that posts to it. */
+  async function webhookBot(space: string) {
     const secret = await system.secret.create({
-      data: { userId, spaceId, kind: WEBHOOK_SECRET_KIND, ciphertext: "sealed" },
+      data: { userId, spaceId: space, kind: WEBHOOK_SECRET_KIND, ciphertext: "sealed" },
     });
     const bot = await system.bot.create({
       data: {
-        spaceId,
+        spaceId: space,
         userId,
         name: "Fleet",
         color: "ink",
         webhookSecretId: secret.id,
-        thread: { create: { spaceId, userId } },
+        thread: { create: { spaceId: space, userId } },
       },
       select: { id: true, thread: { select: { id: true } } },
     });
@@ -66,13 +67,20 @@ describePostgres("webhook post (PostgreSQL)", () => {
       notifications: { send } as unknown as NotificationProvider,
       linkSchemes: ["https", "app"],
     });
+    const post = (body: unknown) =>
+      app.request(`/api/v1/bots/${bot.id}/webhook`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    return { bot, send, post };
+  }
+
+  it("posts the text and buttons as the bot without a routine or run, and pushes it", async () => {
+    const { bot, send, post } = await webhookBot(spaceId);
     const buttons = [{ label: "Open", url: "app://threads/env-1/thread-1" }];
 
-    const response = await app.request(`/api/v1/bots/${bot.id}/webhook`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" },
-      body: JSON.stringify({ post: { text: "Build **finished**", buttons } }),
-    });
+    const response = await post({ post: { text: "Build **finished**", buttons } });
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as { ok: boolean; messageId: string };
@@ -99,5 +107,20 @@ describePostgres("webhook post (PostgreSQL)", () => {
         expect.objectContaining({ userId }),
       ),
     );
+  });
+
+  it("refuses a post into a Space being deleted with a 409 and writes nothing", async () => {
+    const { defaultSpaceId } = await createOrganizationForUser(system, {
+      userId,
+      name: "Deleting",
+    });
+    const { bot, send, post } = await webhookBot(defaultSpaceId);
+    await system.space.update({ where: { id: defaultSpaceId }, data: { deletingAt: new Date() } });
+
+    const response = await post({ post: { text: "Too late" } });
+
+    expect(response.status).toBe(409);
+    expect(await system.message.count({ where: { threadId: bot.thread!.id } })).toBe(0);
+    expect(send).not.toHaveBeenCalled();
   });
 });
